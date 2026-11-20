@@ -100,6 +100,8 @@ export const serviceStatusSchema = z
   })
   .strict();
 
+export const emptyQuerySchema = z.object({}).strict();
+
 export function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
