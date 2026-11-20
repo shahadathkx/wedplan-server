@@ -5,6 +5,7 @@ import { env } from "./lib/env";
 import { AppError } from "./lib/errors";
 import { errorHandler } from "./middleware/error-handler";
 import { notFoundHandler } from "./middleware/not-found";
+import { publicServicesRouter } from "./routes/public-services.routes";
 
 export const app = express();
 
@@ -24,6 +25,7 @@ app.use(
 app.use(express.json());
 
 app.use("/health", healthRouter);
+app.use("/api/services", publicServicesRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
