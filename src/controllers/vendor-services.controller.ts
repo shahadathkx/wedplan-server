@@ -6,8 +6,8 @@ import {
   availabilitySchema,
   createServiceSchema,
   emptyQuerySchema,
-  ServiceRecord,
   updateServiceSchema,
+  type ServiceRecord,
 } from "../lib/services";
 import { getDatabase } from "../lib/mongodb";
 import { getUserId, hasPremiumSubscription } from "../lib/users";

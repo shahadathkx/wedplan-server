@@ -47,15 +47,30 @@ Never commit `.env`; `.env.example` contains placeholders only.
 | `npm run build` | Type-check and compile to `dist/` |
 | `npm start` | Run the compiled server |
 | `npm run seed:admin` | Create the first admin user, without elevating an existing non-admin |
+| `npm test` | Run service validation and access-rule unit tests |
 
 ## API
 
 - `GET /health` returns `{ "status": "ok" }`.
+- `GET /api/services` lists public services with name, category, location,
+  price sorting, and bounded pagination filters.
+- `GET /api/services/featured` lists up to six recently created public services.
+- `GET /api/services/:id` returns a public service; invalid IDs return 400 and
+  missing or non-public services return 404.
+- Vendors can list/create/update/delete their services at
+  `/api/vendor/services`; `PATCH /:id/availability` toggles availability.
+- New vendor services start with `pending` moderation status. Free vendors may
+  have at most three non-rejected available services; the limit is checked on
+  creation and when enabling availability.
+- Admins can filter services at `/api/admin/services`, change status with
+  `PATCH /:id/status`, and delete services with `DELETE /:id`.
+- Service bodies, filters, status values, and MongoDB ObjectIds are validated
+  server-side. Service text searches are treated literally.
 - Unknown routes return a JSON 404 response.
 - Errors use the `{ "message": "..." }` response shape.
 
-The API scaffold includes the MongoDB connection/index setup, authentication
-middleware, and shared error handling needed by the remaining API routes.
+The API includes MongoDB connection/index setup, authentication middleware, and
+shared error handling.
 
 ## Authentication and authorization
 

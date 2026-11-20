@@ -4,8 +4,8 @@ import { parseObjectId } from "../lib/object-id";
 import {
   adminServicesQuerySchema,
   escapeRegex,
-  ServiceRecord,
   serviceStatusSchema,
+  type ServiceRecord,
 } from "../lib/services";
 import { getDatabase } from "../lib/mongodb";
 import { parseInput } from "../lib/validation";
