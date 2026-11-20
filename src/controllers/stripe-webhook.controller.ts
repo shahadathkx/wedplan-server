@@ -88,6 +88,10 @@ async function recordCheckoutTransaction(
 }
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promise<void> {
+  if (session.mode !== "subscription") {
+    throw new AppError(400, "Only subscription checkout sessions are supported");
+  }
+
   const vendorId = requiredVendorId(session.metadata);
   const subscriptionId =
     typeof session.subscription === "string"
