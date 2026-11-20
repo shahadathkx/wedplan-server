@@ -3,7 +3,11 @@ import type { RequestHandler } from "express";
 import { env } from "../lib/env";
 import { AppError } from "../lib/errors";
 import { getDatabase } from "../lib/mongodb";
-import { userIdFilter, type UserRecord } from "../lib/users";
+import {
+  hasExpiredPremiumSubscription,
+  userIdFilter,
+  type UserRecord,
+} from "../lib/users";
 
 const remoteJwks = createRemoteJWKSet(new URL(env.JWKS_URL));
 
@@ -22,9 +26,8 @@ export const verifyJwt: RequestHandler = async (request, _response, next) => {
       return;
     }
 
-    const user = await getDatabase()
-      .collection<UserRecord>("user")
-      .findOne(userIdFilter(payload.sub));
+    const users = getDatabase().collection<UserRecord>("user");
+    let user = await users.findOne(userIdFilter(payload.sub));
 
     if (!user) {
       next(new AppError(401, "User associated with token was not found"));
@@ -33,6 +36,34 @@ export const verifyJwt: RequestHandler = async (request, _response, next) => {
     if (user.isBlocked) {
       next(new AppError(403, "User is blocked"));
       return;
+    }
+
+    if (user.role === "vendor" && hasExpiredPremiumSubscription(user)) {
+      const result = await users.updateOne(
+        {
+          ...userIdFilter(payload.sub),
+          role: "vendor",
+          subscriptionPlan: "premium",
+          subscriptionExpiresAt: user.subscriptionExpiresAt,
+        },
+        { $set: { subscriptionPlan: "free", subscriptionExpiresAt: null } },
+      );
+
+      if (result.matchedCount > 0) {
+        user.subscriptionPlan = "free";
+        user.subscriptionExpiresAt = null;
+      } else {
+        const refreshedUser = await users.findOne(userIdFilter(payload.sub));
+        if (!refreshedUser) {
+          next(new AppError(401, "User associated with token was not found"));
+          return;
+        }
+        if (refreshedUser.isBlocked) {
+          next(new AppError(403, "User is blocked"));
+          return;
+        }
+        user = refreshedUser;
+      }
     }
 
     request.user = user;
