@@ -13,6 +13,7 @@ import {
   customerBookingsRouter,
 } from "./routes/customer-bookings.routes";
 import { vendorBookingsRouter } from "./routes/vendor-bookings.routes";
+import { paymentsRouter } from "./routes/payments.routes";
 
 export const app = express();
 
@@ -38,6 +39,7 @@ app.use("/api/admin/services", adminServicesRouter);
 app.use("/api/bookings", bookingCreationRouter);
 app.use("/api/customer/bookings", customerBookingsRouter);
 app.use("/api/vendor/bookings", vendorBookingsRouter);
+app.use("/api/payments", paymentsRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
