@@ -14,6 +14,7 @@ import {
 } from "./routes/customer-bookings.routes";
 import { vendorBookingsRouter } from "./routes/vendor-bookings.routes";
 import { paymentsRouter } from "./routes/payments.routes";
+import { stripeWebhookRouter } from "./routes/stripe-webhook.routes";
 
 export const app = express();
 
@@ -30,6 +31,7 @@ app.use(
     credentials: true,
   }),
 );
+app.use("/api/webhooks/stripe", stripeWebhookRouter);
 app.use(express.json());
 
 app.use("/health", healthRouter);

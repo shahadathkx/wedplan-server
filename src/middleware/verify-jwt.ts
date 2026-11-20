@@ -3,7 +3,7 @@ import type { RequestHandler } from "express";
 import { env } from "../lib/env";
 import { AppError } from "../lib/errors";
 import { getDatabase } from "../lib/mongodb";
-import type { UserRecord } from "../lib/users";
+import { userIdFilter, type UserRecord } from "../lib/users";
 
 const remoteJwks = createRemoteJWKSet(new URL(env.JWKS_URL));
 
@@ -24,7 +24,7 @@ export const verifyJwt: RequestHandler = async (request, _response, next) => {
 
     const user = await getDatabase()
       .collection<UserRecord>("user")
-      .findOne({ $or: [{ _id: payload.sub }, { id: payload.sub }] });
+      .findOne(userIdFilter(payload.sub));
 
     if (!user) {
       next(new AppError(401, "User associated with token was not found"));

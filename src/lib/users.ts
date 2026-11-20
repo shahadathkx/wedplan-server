@@ -1,4 +1,4 @@
-import type { ObjectId } from "mongodb";
+import { ObjectId, type Filter } from "mongodb";
 import { AppError } from "./errors";
 
 export const userRoles = ["customer", "vendor", "admin"] as const;
@@ -14,6 +14,14 @@ export interface UserRecord {
   businessName?: string | null;
   subscriptionPlan?: "free" | "premium";
   subscriptionExpiresAt?: Date | null;
+}
+
+export function userIdFilter(id: string): Filter<UserRecord> {
+  const alternatives: Filter<UserRecord>[] = [{ id }, { _id: id }];
+  if (/^[a-f\d]{24}$/i.test(id)) {
+    alternatives.push({ _id: new ObjectId(id) });
+  }
+  return { $or: alternatives };
 }
 
 export function getUserId(user: UserRecord | undefined): string {
@@ -34,4 +42,13 @@ export function hasPremiumSubscription(user: UserRecord | undefined): boolean {
 
   const expiresAt = new Date(user.subscriptionExpiresAt);
   return !Number.isNaN(expiresAt.getTime()) && expiresAt.getTime() > Date.now();
+}
+
+export function hasExpiredPremiumSubscription(user: UserRecord | undefined): boolean {
+  if (!user || user.subscriptionPlan !== "premium" || !user.subscriptionExpiresAt) {
+    return false;
+  }
+
+  const expiresAt = new Date(user.subscriptionExpiresAt);
+  return Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() <= Date.now();
 }
