@@ -1,6 +1,7 @@
 import type { Request, RequestHandler } from "express";
 import { ObjectId } from "mongodb";
 import { AppError } from "../lib/errors";
+import { parseObjectId } from "../lib/object-id";
 import {
   availabilitySchema,
   createServiceSchema,
@@ -13,14 +14,6 @@ import { getUserId, hasPremiumSubscription } from "../lib/users";
 import { parseInput } from "../lib/validation";
 
 const FREE_AVAILABLE_SERVICE_LIMIT = 3;
-
-function getServiceObjectId(request: Request): ObjectId {
-  const id = request.params.id;
-  if (typeof id !== "string" || !ObjectId.isValid(id)) {
-    throw new AppError(400, "Invalid service id");
-  }
-  return new ObjectId(id);
-}
 
 async function assertAvailableServiceCapacity(vendorId: string): Promise<void> {
   const count = await getDatabase()
@@ -79,7 +72,7 @@ export const createVendorService: RequestHandler = async (request, response) => 
 export const updateVendorService: RequestHandler = async (request, response) => {
   const input = parseInput(updateServiceSchema, request.body);
   const vendorId = getUserId(request.user);
-  const serviceId = getServiceObjectId(request);
+  const serviceId = parseObjectId(request.params.id, "service id");
   const collection = getDatabase().collection<ServiceRecord>("services");
   const result = await collection.updateOne(
     { _id: serviceId, vendorId },
@@ -102,7 +95,7 @@ export const deleteVendorService: RequestHandler = async (request, response) => 
   const vendorId = getUserId(request.user);
   const result = await getDatabase()
     .collection<ServiceRecord>("services")
-    .deleteOne({ _id: getServiceObjectId(request), vendorId });
+    .deleteOne({ _id: parseObjectId(request.params.id, "service id"), vendorId });
 
   if (result.deletedCount === 0) {
     throw new AppError(404, "Service not found");
@@ -114,7 +107,7 @@ export const deleteVendorService: RequestHandler = async (request, response) => 
 export const setVendorServiceAvailability: RequestHandler = async (request, response) => {
   const input = parseInput(availabilitySchema, request.body);
   const vendorId = getUserId(request.user);
-  const serviceId = getServiceObjectId(request);
+  const serviceId = parseObjectId(request.params.id, "service id");
   const collection = getDatabase().collection<ServiceRecord>("services");
   const service = await collection.findOne({ _id: serviceId, vendorId });
 

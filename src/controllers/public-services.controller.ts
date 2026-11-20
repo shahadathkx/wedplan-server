@@ -1,6 +1,7 @@
 import type { RequestHandler } from "express";
-import { ObjectId, type Sort } from "mongodb";
+import { type Sort } from "mongodb";
 import { AppError } from "../lib/errors";
+import { parseObjectId } from "../lib/object-id";
 import { escapeRegex, publicServicesQuerySchema, type ServiceRecord } from "../lib/services";
 import { getDatabase } from "../lib/mongodb";
 import { parseInput } from "../lib/validation";
@@ -61,14 +62,9 @@ export const getFeaturedServices: RequestHandler = async (_request, response) =>
 };
 
 export const getPublicServiceById: RequestHandler = async (request, response) => {
-  const id = request.params.id;
-  if (typeof id !== "string" || !ObjectId.isValid(id)) {
-    throw new AppError(400, "Invalid service id");
-  }
-
   const service = await getDatabase()
     .collection<ServiceRecord>("services")
-    .findOne({ _id: new ObjectId(id), status: "approved", isAvailable: true });
+    .findOne({ _id: parseObjectId(request.params.id, "service id"), status: "approved", isAvailable: true });
 
   if (!service) {
     throw new AppError(404, "Service not found");

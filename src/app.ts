@@ -7,6 +7,7 @@ import { errorHandler } from "./middleware/error-handler";
 import { notFoundHandler } from "./middleware/not-found";
 import { publicServicesRouter } from "./routes/public-services.routes";
 import { vendorServicesRouter } from "./routes/vendor-services.routes";
+import { adminServicesRouter } from "./routes/admin-services.routes";
 
 export const app = express();
 
@@ -28,6 +29,7 @@ app.use(express.json());
 app.use("/health", healthRouter);
 app.use("/api/services", publicServicesRouter);
 app.use("/api/vendor/services", vendorServicesRouter);
+app.use("/api/admin/services", adminServicesRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
