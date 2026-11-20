@@ -26,6 +26,14 @@ async function createIndexes(database: Db): Promise<void> {
         name: "bookings_customer_service_date_status",
       },
       {
+        key: { customerId: 1, serviceId: 1, eventDate: 1 },
+        name: "bookings_active_unique",
+        unique: true,
+        partialFilterExpression: {
+          $or: [{ status: "pending" }, { status: "accepted" }],
+        },
+      },
+      {
         key: { vendorId: 1, createdAt: -1 },
         name: "bookings_vendor_created",
       },

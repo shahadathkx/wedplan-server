@@ -1,11 +1,14 @@
 import type { RequestHandler } from "express";
-import { ObjectId } from "mongodb";
+import { MongoServerError, ObjectId } from "mongodb";
 import { AppError } from "../lib/errors";
 import { parseObjectId } from "../lib/object-id";
-import { BookingRecord, createBookingSchema, emptyBodySchema } from "../lib/bookings";
+import {
+  createBookingSchema,
+  emptyBodySchema,
+  type BookingRecord,
+} from "../lib/bookings";
 import { bookingPopulationPipeline } from "../lib/populate-bookings";
-import { ServiceRecord } from "../lib/services";
-import { emptyQuerySchema } from "../lib/services";
+import { emptyQuerySchema, type ServiceRecord } from "../lib/services";
 import { getDatabase } from "../lib/mongodb";
 import { getUserId } from "../lib/users";
 import { parseInput } from "../lib/validation";
@@ -47,7 +50,14 @@ export const createCustomerBooking: RequestHandler = async (request, response) =
     status: "pending",
     createdAt: new Date(),
   };
-  await bookings.insertOne(booking);
+  try {
+    await bookings.insertOne(booking);
+  } catch (error) {
+    if (error instanceof MongoServerError && error.code === 11000) {
+      throw new AppError(400, "An active booking already exists for this service and event date");
+    }
+    throw error;
+  }
 
   response.status(201).json({ booking });
 };
