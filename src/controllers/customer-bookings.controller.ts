@@ -2,8 +2,10 @@ import type { RequestHandler } from "express";
 import { ObjectId } from "mongodb";
 import { AppError } from "../lib/errors";
 import { parseObjectId } from "../lib/object-id";
-import { BookingRecord, createBookingSchema } from "../lib/bookings";
+import { BookingRecord, createBookingSchema, emptyBodySchema } from "../lib/bookings";
+import { bookingPopulationPipeline } from "../lib/populate-bookings";
 import { ServiceRecord } from "../lib/services";
+import { emptyQuerySchema } from "../lib/services";
 import { getDatabase } from "../lib/mongodb";
 import { getUserId } from "../lib/users";
 import { parseInput } from "../lib/validation";
@@ -48,4 +50,43 @@ export const createCustomerBooking: RequestHandler = async (request, response) =
   await bookings.insertOne(booking);
 
   response.status(201).json({ booking });
+};
+
+export const listCustomerBookings: RequestHandler = async (request, response) => {
+  parseInput(emptyQuerySchema, request.query);
+  const bookings = await getDatabase()
+    .collection<BookingRecord>("bookings")
+    .aggregate(bookingPopulationPipeline({ customerId: getUserId(request.user) }))
+    .toArray();
+
+  response.status(200).json({ bookings });
+};
+
+export const cancelCustomerBooking: RequestHandler = async (request, response) => {
+  parseInput(emptyBodySchema, request.body);
+  const customerId = getUserId(request.user);
+  const bookingId = parseObjectId(request.params.id, "booking id");
+  const collection = getDatabase().collection<BookingRecord>("bookings");
+  const result = await collection.updateOne(
+    { _id: bookingId, customerId, status: "pending" },
+    { $set: { status: "cancelled" } },
+  );
+
+  if (result.matchedCount === 0) {
+    const booking = await collection.findOne(
+      { _id: bookingId, customerId },
+      { projection: { status: 1 } },
+    );
+    if (!booking) {
+      throw new AppError(404, "Booking not found");
+    }
+    throw new AppError(400, "Only pending bookings can be cancelled");
+  }
+
+  const booking = await collection.findOne({ _id: bookingId, customerId });
+  if (!booking) {
+    throw new AppError(404, "Booking not found");
+  }
+
+  response.status(200).json({ booking });
 };
