@@ -8,7 +8,10 @@ import { notFoundHandler } from "./middleware/not-found";
 import { publicServicesRouter } from "./routes/public-services.routes";
 import { vendorServicesRouter } from "./routes/vendor-services.routes";
 import { adminServicesRouter } from "./routes/admin-services.routes";
-import { customerBookingsRouter } from "./routes/customer-bookings.routes";
+import {
+  bookingCreationRouter,
+  customerBookingsRouter,
+} from "./routes/customer-bookings.routes";
 import { vendorBookingsRouter } from "./routes/vendor-bookings.routes";
 
 export const app = express();
@@ -32,7 +35,8 @@ app.use("/health", healthRouter);
 app.use("/api/services", publicServicesRouter);
 app.use("/api/vendor/services", vendorServicesRouter);
 app.use("/api/admin/services", adminServicesRouter);
-app.use("/api/bookings", customerBookingsRouter);
+app.use("/api/bookings", bookingCreationRouter);
+app.use("/api/customer/bookings", customerBookingsRouter);
 app.use("/api/vendor/bookings", vendorBookingsRouter);
 
 app.use(notFoundHandler);

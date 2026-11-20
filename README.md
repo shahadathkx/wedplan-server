@@ -64,6 +64,17 @@ Never commit `.env`; `.env.example` contains placeholders only.
   creation and when enabling availability.
 - Admins can filter services at `/api/admin/services`, change status with
   `PATCH /:id/status`, and delete services with `DELETE /:id`.
+- Customers can create bookings with `POST /api/bookings`, view their history at
+  `GET /api/customer/bookings`, and cancel pending bookings with
+  `PATCH /api/customer/bookings/:id/cancel`.
+- Vendors can view their bookings at `GET /api/vendor/bookings` and accept or
+  reject pending bookings with `PATCH /api/vendor/bookings/:id` and an
+  `{ "action": "accept" | "reject" }` body. Booking lists include populated
+  service, customer, and vendor details.
+- Booking creation rejects self-bookings, non-public services, and duplicate
+  pending/accepted bookings for the same customer, service, and event date.
+  Cancellation and vendor decisions are conditional on current `pending`
+  status and ownership.
 - Service bodies, filters, status values, and MongoDB ObjectIds are validated
   server-side. Service text searches are treated literally.
 - Unknown routes return a JSON 404 response.

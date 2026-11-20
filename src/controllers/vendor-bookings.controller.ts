@@ -1,6 +1,9 @@
 import type { RequestHandler } from "express";
 import { AppError } from "../lib/errors";
-import { BookingRecord, vendorBookingActionSchema } from "../lib/bookings";
+import {
+  vendorBookingActionSchema,
+  type BookingRecord,
+} from "../lib/bookings";
 import { parseObjectId } from "../lib/object-id";
 import { bookingPopulationPipeline } from "../lib/populate-bookings";
 import { emptyQuerySchema } from "../lib/services";

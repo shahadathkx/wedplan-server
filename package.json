@@ -8,7 +8,7 @@
     "build": "tsc",
     "start": "node dist/src/server.js",
     "seed:admin": "tsx scripts/seed-admin.ts",
-    "test": "tsx --test src/lib/services.test.ts"
+    "test": "tsx --test src/lib/services.test.ts src/lib/bookings.test.ts"
   },
   "type": "commonjs",
   "dependencies": {

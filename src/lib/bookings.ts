@@ -21,7 +21,7 @@ export const createBookingSchema = z
     serviceId: z.string().regex(/^[a-f\d]{24}$/i, "Invalid service id"),
     eventDate: z
       .union([z.iso.date(), z.iso.datetime({ offset: true })])
-      .transform((value) => new Date(value)),
+      .transform((value) => new Date(value.slice(0, 10))),
     eventLocation: z.string().trim().min(2).max(200),
     message: z.string().trim().max(2000).optional().default(""),
   })
