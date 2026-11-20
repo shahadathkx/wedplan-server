@@ -18,6 +18,10 @@ async function createIndexes(database: Db): Promise<void> {
     ]),
     database.collection("bookings").createIndexes([
       {
+        key: { customerId: 1, createdAt: -1 },
+        name: "bookings_customer_created",
+      },
+      {
         key: { customerId: 1, serviceId: 1, eventDate: 1, status: 1 },
         name: "bookings_customer_service_date_status",
       },
