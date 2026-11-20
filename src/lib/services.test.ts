@@ -10,7 +10,10 @@ import {
   updateServiceSchema,
 } from "./services";
 import { parseObjectId } from "./object-id";
-import { hasPremiumSubscription } from "./users";
+import {
+  hasExpiredPremiumSubscription,
+  hasPremiumSubscription,
+} from "./users";
 
 const validService = {
   serviceName: "Golden Hour Photography",
@@ -66,12 +69,16 @@ test("search text is escaped and only 24-character hexadecimal ObjectIds are acc
 
 test("expired Premium subscriptions are treated as free for service limits", () => {
   assert.equal(hasPremiumSubscription({ subscriptionPlan: "free" }), false);
+  assert.equal(hasExpiredPremiumSubscription({ subscriptionPlan: "free" }), false);
   assert.equal(hasPremiumSubscription({ subscriptionPlan: "premium" }), true);
+  assert.equal(hasExpiredPremiumSubscription({ subscriptionPlan: "premium" }), false);
+  const expiredUser = {
+    subscriptionPlan: "premium" as const,
+    subscriptionExpiresAt: new Date(Date.now() - 60_000),
+  };
   assert.equal(
-    hasPremiumSubscription({
-      subscriptionPlan: "premium",
-      subscriptionExpiresAt: new Date(Date.now() - 60_000),
-    }),
+    hasPremiumSubscription(expiredUser),
     false,
   );
+  assert.equal(hasExpiredPremiumSubscription(expiredUser), true);
 });

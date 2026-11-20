@@ -75,6 +75,14 @@ Never commit `.env`; `.env.example` contains placeholders only.
   pending/accepted bookings for the same customer, service, and event date.
   Cancellation and vendor decisions are conditional on current `pending`
   status and ownership.
+- Vendors can start Premium checkout with `POST /api/payments/checkout`. The
+  authenticated vendor identity is used for Stripe metadata; client-supplied
+  vendor IDs are ignored.
+- `POST /api/webhooks/stripe` verifies Stripe signatures against the raw request
+  body. Verified checkout and invoice events update Premium access and record
+  checkout transactions idempotently; subscription cancellation/expiry
+  downgrades the vendor. Expired Premium vendors are also downgraded when their
+  user record is next loaded.
 - Service bodies, filters, status values, and MongoDB ObjectIds are validated
   server-side. Service text searches are treated literally.
 - Unknown routes return a JSON 404 response.
