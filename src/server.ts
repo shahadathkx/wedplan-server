@@ -3,7 +3,7 @@ import { env } from "./lib/env";
 import { closeDatabaseConnection, connectToDatabase } from "./lib/mongodb";
 
 async function startServer(): Promise<void> {
-  await connectToDatabase();
+  await connectToDatabase(env.MONGODB_URI, env.DB_NAME);
   const server = app.listen(env.PORT, () => {
     console.log(`WedPlan API listening on port ${env.PORT}`);
   });

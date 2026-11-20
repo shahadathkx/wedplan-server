@@ -1,5 +1,4 @@
 import { Db, MongoClient } from "mongodb";
-import { env } from "./env";
 
 let client: MongoClient | null = null;
 let databaseInstance: Db | null = null;
@@ -35,8 +34,8 @@ async function createIndexes(database: Db): Promise<void> {
 }
 
 export function connectToDatabase(
-  uri: string = env.MONGODB_URI,
-  databaseName: string = env.DB_NAME,
+  uri: string,
+  databaseName: string,
 ): Promise<Db> {
   if (connection) {
     return connection;
