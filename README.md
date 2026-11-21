@@ -105,14 +105,18 @@ Set secrets in your local `.env` or deployment secret manager. Do not commit
 
 ### Required production URLs
 
-- Set `CLIENT_URL` to the exact production client origin, with no path or
-  trailing route.
-- Set `JWKS_URL` to the client app's reachable Better Auth JWKS URL
-  (`/api/auth/jwks` by default).
-- Configure the client app's API base URL to the deployed WedPlan Server URL.
+- Set `CLIENT_URL` to
+  `https://wedplan-client-eight.vercel.app` (origin only).
+- Set `JWKS_URL` to
+  `https://wedplan-client-eight.vercel.app/api/auth/jwks`.
+- Set the client app's `NEXT_PUBLIC_API_URL` to
+  `https://wedplan-server-skhe.vercel.app`.
 - Register the deployed server's `/api/webhooks/stripe` endpoint with Stripe.
-- For a Vercel deployment, use its assigned API domain for the server URL above
-  and set the variables in Vercel Project Settings.
+- Set server runtime variables in this **server** Vercel project's Settings.
+  `MONGODB_URI`, `DB_NAME`, `CLIENT_URL`, `JWKS_URL`, `STRIPE_SECRET_KEY`,
+  `STRIPE_WEBHOOK_SECRET`, and `STRIPE_PRICE_ID` are required. `PORT` is
+  optional and unnecessary on Vercel. `ADMIN_NAME` and `ADMIN_EMAIL` are only
+  needed when running `npm run seed:admin`.
 
 ## Stripe webhook setup
 
@@ -157,9 +161,12 @@ exports the Express `app` as its serverless handler; the app connects to MongoDB
 on demand and reuses the connection within a warm function instance.
 
 1. Import the `wedplan-server` repository into Vercel.
-2. Add all required runtime environment variables from the table above. Add
-   `ADMIN_NAME` and `ADMIN_EMAIL` only if you will run the seed script locally
-   against the production database.
+2. Set `MONGODB_URI`, `DB_NAME`, `CLIENT_URL`,
+   `JWKS_URL=https://wedplan-client-eight.vercel.app/api/auth/jwks`,
+   `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and `STRIPE_PRICE_ID`. Set
+   `CLIENT_URL=https://wedplan-client-eight.vercel.app`. Add `ADMIN_NAME` and
+   `ADMIN_EMAIL` only if you will run the seed script locally against the
+   production database.
 3. Deploy. The rewrite in `vercel.json` forwards API paths to the Express
    function.
 4. Configure Stripe to send the required events to
