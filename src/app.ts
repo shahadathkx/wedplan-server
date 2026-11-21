@@ -1,8 +1,8 @@
 import cors from "cors";
 import express from "express";
+import { createCorsOptions } from "./lib/cors";
 import { healthRouter } from "./routes/health.routes";
 import { env } from "./lib/env";
-import { AppError } from "./lib/errors";
 import { errorHandler } from "./middleware/error-handler";
 import { notFoundHandler } from "./middleware/not-found";
 import { publicServicesRouter } from "./routes/public-services.routes";
@@ -22,20 +22,13 @@ import { adminRouter } from "./routes/admin.routes";
 import { connectToDatabase } from "./lib/mongodb";
 
 export const app = express();
+const nodeEnvironment =
+  process.env.NODE_ENV ??
+  (process.env.VERCEL === "1" ? "production" : "development");
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin || origin === env.CLIENT_URL) {
-        callback(null, true);
-        return;
-      }
+app.use(cors(createCorsOptions(env.CLIENT_URL, nodeEnvironment)));
+app.use("/health", healthRouter);
 
-      callback(new AppError(403, "Origin not allowed"));
-    },
-    credentials: true,
-  }),
-);
 app.use(async (_request, _response, next) => {
   try {
     await connectToDatabase(env.MONGODB_URI, env.DB_NAME);
@@ -47,7 +40,6 @@ app.use(async (_request, _response, next) => {
 app.use("/api/webhooks/stripe", stripeWebhookRouter);
 app.use(express.json());
 
-app.use("/health", healthRouter);
 app.use("/api/me", profileRouter);
 app.use("/api/services", publicServicesRouter);
 app.use("/api/vendor/services", vendorServicesRouter);
