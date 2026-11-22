@@ -128,3 +128,60 @@ test("database connection failures return a JSON 500 response", async () => {
     }
   }
 });
+
+test("malformed JSON bodies return a JSON 400 response", async () => {
+  const keys = ["MONGODB_URI", "DB_NAME"];
+  const originalValues = new Map(keys.map((key) => [key, process.env[key]]));
+  process.env.MONGODB_URI = "mongodb://127.0.0.1:27017";
+  process.env.DB_NAME = "wedplan";
+
+  type MongoCache = {
+    client: MongoClient | null;
+    database: Db | null;
+    connection: Promise<Db> | null;
+  };
+  const cache = (globalThis as typeof globalThis & {
+    wedplanMongoCache?: MongoCache;
+  }).wedplanMongoCache;
+  assert.ok(cache);
+  const originalConnection = cache.connection;
+  const originalDatabase = cache.database;
+  cache.connection = Promise.resolve({} as Db);
+
+  try {
+    const { app } = await import("./app");
+    const server = app.listen(0, "127.0.0.1");
+
+    try {
+      await new Promise<void>((resolve, reject) => {
+        server.once("listening", resolve);
+        server.once("error", reject);
+      });
+
+      const address = server.address();
+      assert.ok(address && typeof address !== "string");
+      const response = await fetch(`http://127.0.0.1:${address.port}/api/bookings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{",
+      });
+      assert.equal(response.status, 400);
+      assert.equal(response.headers.get("content-type")?.includes("application/json"), true);
+      assert.deepEqual(await response.json(), { message: "Invalid JSON body" });
+    } finally {
+      await new Promise<void>((resolve, reject) => {
+        server.close((error) => (error ? reject(error) : resolve()));
+      });
+    }
+  } finally {
+    cache.connection = originalConnection;
+    cache.database = originalDatabase;
+    for (const [key, value] of originalValues) {
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
+    }
+  }
+});
