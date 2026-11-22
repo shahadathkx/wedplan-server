@@ -3,6 +3,7 @@ import express from "express";
 import { createCorsOptions } from "./lib/cors";
 import { getDatabaseConfig } from "./lib/env";
 import { connectToDatabase } from "./lib/mongodb";
+import { getHomePage } from "./controllers/home.controller";
 import { errorHandler } from "./middleware/error-handler";
 import { notFoundHandler } from "./middleware/not-found";
 import { adminRouter } from "./routes/admin.routes";
@@ -30,6 +31,7 @@ const nodeEnvironment =
   (process.env.VERCEL === "1" ? "production" : "development");
 
 app.use(cors(createCorsOptions(process.env.CLIENT_URL, nodeEnvironment)));
+app.get("/", getHomePage);
 app.use("/health", healthRouter);
 
 app.use(async (_request, _response, next) => {
