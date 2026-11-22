@@ -166,9 +166,11 @@ Protected requests use `Authorization: Bearer <jwt>`. Errors use
 
 ## Deployment
 
-Vercel serves the Express application through `api/index.ts`. The rewrite in
-`vercel.json` forwards all incoming routes to that function. MongoDB connections
-are cached globally and reused across warm function invocations.
+Vercel auto-detects the Express application exported from `src/index.ts` and
+deploys it as a serverless function. There is no `vercel.json`; set the Vercel
+Framework Preset to Express and leave Build Command and Output Directory
+overrides disabled. MongoDB connections are cached globally and reused across
+warm function invocations.
 
 1. Import the `wedplan-server` repository into Vercel.
 2. Set `MONGODB_URI`, `DB_NAME`, `CLIENT_URL`,
@@ -177,8 +179,9 @@ are cached globally and reused across warm function invocations.
    `CLIENT_URL=https://wedplan-client-eight.vercel.app`. Add `ADMIN_NAME` and
    `ADMIN_EMAIL` only if you will run the seed script locally against the
    production database.
-3. Deploy. The rewrite in `vercel.json` forwards all paths, including `/health`,
-   to the Express function.
+3. Set the Framework Preset to Express, keep Build Command and Output Directory
+   overrides disabled, and deploy. Vercel routes requests to the Express
+   function, including `/health`.
 4. Configure Stripe to send the required events to
    `https://<your-api-domain>/api/webhooks/stripe`; set its endpoint signing
    secret as `STRIPE_WEBHOOK_SECRET`.
