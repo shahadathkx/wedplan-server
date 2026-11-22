@@ -1,3 +1,7 @@
+import express from "express";
 import { app } from "./src/app";
 
-module.exports = app;
+const vercelApp = express();
+vercelApp.use(app);
+
+module.exports = vercelApp;
