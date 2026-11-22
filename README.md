@@ -130,6 +130,8 @@ Set secrets in your local `.env` or deployment secret manager. Do not commit
 The server handles verified `checkout.session.completed`, `invoice.paid`,
 `customer.subscription.deleted`, and `customer.subscription.updated` events.
 Premium access is changed only by these verified webhook events.
+Successful Checkout returns to `/payment-success`; cancelled Checkout returns
+to `/payment-cancel`. The client confirms Premium by polling `/api/me`.
 
 For local development, install and authenticate the
 [Stripe CLI](https://docs.stripe.com/stripe-cli), then run:
@@ -155,7 +157,7 @@ Premium price ID for local testing.
   `GET /api/customer/stats`.
 - Admin: `/api/admin/stats`, `/api/admin/users`, `/api/admin/users/:id`,
   `/api/admin/users/:id/block`, `/api/admin/services`, and
-  `/api/admin/transactions`.
+  `/api/admin/transactions`. Paid revenue statistics are grouped by currency.
 - Stripe webhook: `POST /api/webhooks/stripe` (raw request body; no JWT).
 
 Protected requests use `Authorization: Bearer <jwt>`. Errors use
