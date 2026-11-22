@@ -1,4 +1,9 @@
 import Stripe from "stripe";
-import { env } from "./env";
+import { getStripeSecretKey } from "./env";
 
-export const stripe = new Stripe(env.STRIPE_SECRET_KEY);
+let stripeClient: Stripe | undefined;
+
+export function getStripe(): Stripe {
+  stripeClient ??= new Stripe(getStripeSecretKey());
+  return stripeClient;
+}

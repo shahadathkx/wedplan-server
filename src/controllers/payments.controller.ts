@@ -1,9 +1,9 @@
 import type { RequestHandler } from "express";
 import { z } from "zod";
 import { AppError } from "../lib/errors";
-import { env } from "../lib/env";
+import { getClientUrl, getStripePriceId } from "../lib/env";
 import { getUserId } from "../lib/users";
-import { stripe } from "../lib/stripe";
+import { getStripe } from "../lib/stripe";
 import { parseInput } from "../lib/validation";
 
 const checkoutRequestSchema = z
@@ -16,11 +16,12 @@ const checkoutRequestSchema = z
 export const createCheckoutSession: RequestHandler = async (request, response) => {
   parseInput(checkoutRequestSchema, request.body);
   const vendorId = getUserId(request.user);
-  const session = await stripe.checkout.sessions.create({
+  const clientUrl = getClientUrl();
+  const session = await getStripe().checkout.sessions.create({
     mode: "subscription",
-    line_items: [{ price: env.STRIPE_PRICE_ID, quantity: 1 }],
-    success_url: `${env.CLIENT_URL}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${env.CLIENT_URL}/subscription/cancelled`,
+    line_items: [{ price: getStripePriceId(), quantity: 1 }],
+    success_url: `${clientUrl}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${clientUrl}/subscription/cancelled`,
     client_reference_id: vendorId,
     metadata: { vendorId },
     subscription_data: { metadata: { vendorId } },

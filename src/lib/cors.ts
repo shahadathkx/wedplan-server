@@ -2,16 +2,21 @@ import { AppError } from "./errors";
 
 export function isAllowedCorsOrigin(
   origin: string | undefined,
-  clientUrl: string,
+  clientUrl: string | undefined,
   nodeEnvironment: string | undefined,
 ): boolean {
   return (
-    origin === clientUrl ||
+    (origin !== undefined &&
+      clientUrl !== undefined &&
+      origin === new URL(clientUrl).origin) ||
     (nodeEnvironment === "development" && origin === "http://localhost:3000")
   );
 }
 
-export function createCorsOptions(clientUrl: string, nodeEnvironment: string | undefined) {
+export function createCorsOptions(
+  clientUrl: string | undefined,
+  nodeEnvironment: string | undefined,
+) {
   return {
     origin(
       origin: string | undefined,

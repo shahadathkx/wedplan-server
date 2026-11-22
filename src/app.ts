@@ -2,7 +2,7 @@ import cors from "cors";
 import express from "express";
 import { createCorsOptions } from "./lib/cors";
 import { healthRouter } from "./routes/health.routes";
-import { env } from "./lib/env";
+import { getDatabaseConfig } from "./lib/env";
 import { errorHandler } from "./middleware/error-handler";
 import { notFoundHandler } from "./middleware/not-found";
 import { publicServicesRouter } from "./routes/public-services.routes";
@@ -26,12 +26,13 @@ const nodeEnvironment =
   process.env.NODE_ENV ??
   (process.env.VERCEL === "1" ? "production" : "development");
 
-app.use(cors(createCorsOptions(env.CLIENT_URL, nodeEnvironment)));
+app.use(cors(createCorsOptions(process.env.CLIENT_URL, nodeEnvironment)));
 app.use("/health", healthRouter);
 
 app.use(async (_request, _response, next) => {
   try {
-    await connectToDatabase(env.MONGODB_URI, env.DB_NAME);
+    const { uri, databaseName } = getDatabaseConfig();
+    await connectToDatabase(uri, databaseName);
     next();
   } catch (error) {
     next(error);

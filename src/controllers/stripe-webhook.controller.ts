@@ -2,9 +2,9 @@ import type { RequestHandler } from "express";
 import { MongoServerError, ObjectId } from "mongodb";
 import Stripe from "stripe";
 import { AppError } from "../lib/errors";
-import { env } from "../lib/env";
+import { getStripeWebhookSecret } from "../lib/env";
 import { getDatabase } from "../lib/mongodb";
-import { stripe } from "../lib/stripe";
+import { getStripe } from "../lib/stripe";
 import { userIdFilter, type UserRecord } from "../lib/users";
 
 function getSubscriptionExpiry(subscription: Stripe.Subscription): Date | null {
@@ -102,7 +102,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
     throw new AppError(400, "Completed checkout session has no subscription");
   }
 
-  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+  const subscription = await getStripe().subscriptions.retrieve(subscriptionId);
   await syncSubscription(vendorId, subscription);
   await recordCheckoutTransaction(session, vendorId, subscriptionId);
 }
@@ -115,8 +115,8 @@ async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
 
   const subscription =
     typeof subscriptionReference === "string"
-      ? await stripe.subscriptions.retrieve(subscriptionReference)
-      : await stripe.subscriptions.retrieve(subscriptionReference.id);
+      ? await getStripe().subscriptions.retrieve(subscriptionReference)
+      : await getStripe().subscriptions.retrieve(subscriptionReference.id);
   const vendorId =
     subscription.metadata.vendorId ??
     invoice.parent?.subscription_details?.metadata?.vendorId;
@@ -124,7 +124,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
 }
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Promise<void> {
-  const currentSubscription = await stripe.subscriptions.retrieve(subscription.id);
+  const currentSubscription = await getStripe().subscriptions.retrieve(subscription.id);
   await syncSubscription(
     requiredVendorId(currentSubscription.metadata),
     currentSubscription,
@@ -141,13 +141,11 @@ export const receiveStripeWebhook: RequestHandler = async (request, response) =>
     throw new AppError(400, "Missing or invalid Stripe webhook signature");
   }
 
+  const stripe = getStripe();
+  const webhookSecret = getStripeWebhookSecret();
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(
-      request.body,
-      signature,
-      env.STRIPE_WEBHOOK_SECRET,
-    );
+    event = stripe.webhooks.constructEvent(request.body, signature, webhookSecret);
   } catch {
     throw new AppError(400, "Invalid Stripe webhook signature");
   }

@@ -120,6 +120,11 @@ Set secrets in your local `.env` or deployment secret manager. Do not commit
   optional and unnecessary on Vercel. `ADMIN_NAME`, `ADMIN_EMAIL`, and
   `ADMIN_PASSWORD` are only needed when running `npm run seed:admin`.
 
+  The server validates database, JWT, and Stripe settings when each feature uses
+  them, rather than crashing the serverless function during startup. `/health`
+  does not require database or Stripe settings; service endpoints require
+  `MONGODB_URI` and `DB_NAME`.
+
 ## Stripe webhook setup
 
 The server handles verified `checkout.session.completed`, `invoice.paid`,

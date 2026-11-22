@@ -1,6 +1,6 @@
 import { createRemoteJWKSet, errors, jwtVerify } from "jose";
 import type { RequestHandler } from "express";
-import { env } from "../lib/env";
+import { getJwksUrl } from "../lib/env";
 import { AppError } from "../lib/errors";
 import { getDatabase } from "../lib/mongodb";
 import {
@@ -9,7 +9,12 @@ import {
   type UserRecord,
 } from "../lib/users";
 
-const remoteJwks = createRemoteJWKSet(new URL(env.JWKS_URL));
+let remoteJwks: ReturnType<typeof createRemoteJWKSet> | undefined;
+
+function getRemoteJwks(): ReturnType<typeof createRemoteJWKSet> {
+  remoteJwks ??= createRemoteJWKSet(new URL(getJwksUrl()));
+  return remoteJwks;
+}
 
 export const verifyJwt: RequestHandler = async (request, _response, next) => {
   const authorization = request.header("authorization");
@@ -20,7 +25,7 @@ export const verifyJwt: RequestHandler = async (request, _response, next) => {
   }
 
   try {
-    const { payload } = await jwtVerify(match[1], remoteJwks);
+    const { payload } = await jwtVerify(match[1], getRemoteJwks());
     if (typeof payload.sub !== "string" || payload.sub.length === 0) {
       next(new AppError(401, "Invalid authorization token"));
       return;

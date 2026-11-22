@@ -1,11 +1,13 @@
 import { app } from "./app";
-import { env } from "./lib/env";
+import { getDatabaseConfig, getPort } from "./lib/env";
 import { closeDatabaseConnection, connectToDatabase } from "./lib/mongodb";
 
 async function startServer(): Promise<void> {
-  await connectToDatabase(env.MONGODB_URI, env.DB_NAME);
-  const server = app.listen(env.PORT, () => {
-    console.log(`WedPlan API listening on port ${env.PORT}`);
+  const { uri, databaseName } = getDatabaseConfig();
+  await connectToDatabase(uri, databaseName);
+  const port = getPort();
+  const server = app.listen(port, () => {
+    console.log(`WedPlan API listening on port ${port}`);
   });
 
   const shutdown = (): void => {
