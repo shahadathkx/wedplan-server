@@ -147,7 +147,8 @@ Premium price ID for local testing.
 
 ## API overview
 
-- Public services: `GET /api/services`, `GET /api/services/featured`, and
+- Public services: `GET /api/services`, `GET /api/services/featured` (returns a
+  JSON array, including `[]` when no services are available), and
   `GET /api/services/:id`.
 - Authenticated profile: `GET|PATCH /api/me`; profile updates accept only
   `name`, `image`, and `businessName`.

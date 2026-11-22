@@ -5,10 +5,12 @@ export function isAllowedCorsOrigin(
   clientUrl: string | undefined,
   nodeEnvironment: string | undefined,
 ): boolean {
+  const normalizedClientUrl = clientUrl?.replace(/\/+$/, "");
+
   return (
     (origin !== undefined &&
-      clientUrl !== undefined &&
-      origin === new URL(clientUrl).origin) ||
+      normalizedClientUrl !== undefined &&
+      origin === normalizedClientUrl) ||
     (nodeEnvironment === "development" && origin === "http://localhost:3000")
   );
 }
@@ -36,6 +38,7 @@ export function createCorsOptions(
     },
     credentials: true,
     allowedHeaders: ["Authorization", "Content-Type"],
-    methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    optionsSuccessStatus: 204,
   };
 }

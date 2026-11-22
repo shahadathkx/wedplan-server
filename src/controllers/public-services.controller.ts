@@ -58,7 +58,7 @@ export const getFeaturedServices: RequestHandler = async (_request, response) =>
     .limit(6)
     .toArray();
 
-  response.status(200).json({ services });
+  response.status(200).json(services);
 };
 
 export const getPublicServiceById: RequestHandler = async (request, response) => {
