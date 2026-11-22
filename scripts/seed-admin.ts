@@ -1,5 +1,6 @@
 import "dotenv/config";
-import { randomUUID } from "node:crypto";
+import { hashPassword } from "better-auth/crypto";
+import { ObjectId } from "mongodb";
 import { z } from "zod";
 import { closeDatabaseConnection, connectToDatabase } from "../src/lib/mongodb";
 
@@ -8,11 +9,17 @@ const seedEnvironmentSchema = z.object({
   DB_NAME: z.string().min(1),
   ADMIN_EMAIL: z.string().email().transform((email) => email.toLowerCase()),
   ADMIN_NAME: z.string().trim().min(1),
+  ADMIN_PASSWORD: z
+    .string()
+    .regex(
+      /(?=.*[a-z])(?=.*[A-Z]).{6,}/,
+      "Admin password must be at least 6 characters and include an uppercase and a lowercase letter",
+    ),
 });
 
 interface AdminUser {
-  _id: string;
-  id: string;
+  _id: string | ObjectId;
+  id?: string;
   name: string;
   email: string;
   emailVerified: boolean;
@@ -26,6 +33,16 @@ interface AdminUser {
   subscriptionExpiresAt: null;
 }
 
+interface CredentialAccount {
+  _id?: ObjectId;
+  accountId: string;
+  providerId: "credential";
+  userId: string | ObjectId;
+  password: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 async function seedAdmin(): Promise<void> {
   const parsed = seedEnvironmentSchema.safeParse(process.env);
   if (!parsed.success) {
@@ -35,7 +52,7 @@ async function seedAdmin(): Promise<void> {
     throw new Error(`Invalid admin seed configuration: ${details}`);
   }
 
-  const { MONGODB_URI, DB_NAME, ADMIN_EMAIL, ADMIN_NAME } = parsed.data;
+  const { MONGODB_URI, DB_NAME, ADMIN_EMAIL, ADMIN_NAME, ADMIN_PASSWORD } = parsed.data;
   const database = await connectToDatabase(MONGODB_URI, DB_NAME);
   const users = database.collection<AdminUser>("user");
   const existingUser = await users.findOne({ email: ADMIN_EMAIL });
@@ -47,29 +64,46 @@ async function seedAdmin(): Promise<void> {
       );
     }
 
-    console.log(`Admin user ${ADMIN_EMAIL} already exists; no changes made.`);
-    return;
   }
 
-  const id = randomUUID();
   const now = new Date();
-  await users.insertOne({
-    _id: id,
-    id,
-    name: ADMIN_NAME,
-    email: ADMIN_EMAIL,
-    emailVerified: false,
-    image: null,
-    createdAt: now,
-    updatedAt: now,
-    role: "admin",
-    isBlocked: false,
-    businessName: null,
-    subscriptionPlan: "free",
-    subscriptionExpiresAt: null,
-  });
+  const userRecordId = existingUser?._id ?? new ObjectId();
+  const id = existingUser?.id ?? userRecordId.toString();
+  if (!existingUser) {
+    await users.insertOne({
+      _id: userRecordId,
+      name: ADMIN_NAME,
+      email: ADMIN_EMAIL,
+      emailVerified: false,
+      image: null,
+      createdAt: now,
+      updatedAt: now,
+      role: "admin",
+      isBlocked: false,
+      businessName: null,
+      subscriptionPlan: "free",
+      subscriptionExpiresAt: null,
+    });
+  }
 
-  console.log(`Created admin user ${ADMIN_EMAIL}.`);
+  const accounts = database.collection<CredentialAccount>("account");
+  const existingCredential = await accounts.findOne({
+    providerId: "credential",
+    accountId: id,
+  });
+  if (!existingCredential) {
+    await accounts.insertOne({
+      userId: userRecordId,
+      providerId: "credential",
+      accountId: id,
+      password: await hashPassword(ADMIN_PASSWORD),
+      createdAt: now,
+      updatedAt: now,
+    });
+    console.log(`Admin sign-in enabled for ${ADMIN_EMAIL}.`);
+  } else {
+    console.log(`Admin user ${ADMIN_EMAIL} already has a password sign-in.`);
+  }
 }
 
 seedAdmin()

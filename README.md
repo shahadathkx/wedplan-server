@@ -68,7 +68,8 @@ npm run dev
 The API listens on port `5000` by default. `GET /health` is the health check.
 MongoDB indexes are created when the application connects.
 
-To create the initial admin account, set `ADMIN_NAME` and `ADMIN_EMAIL` and run:
+To create the initial admin account and password credential, set `ADMIN_NAME`,
+`ADMIN_EMAIL`, and `ADMIN_PASSWORD` and run:
 
 ```powershell
 npm run seed:admin
@@ -102,6 +103,7 @@ Set secrets in your local `.env` or deployment secret manager. Do not commit
 | `STRIPE_PRICE_ID` | Yes | Stripe Premium recurring price ID |
 | `ADMIN_NAME` | Seed only | Name for the initial admin user |
 | `ADMIN_EMAIL` | Seed only | Email for the initial admin user |
+| `ADMIN_PASSWORD` | Seed only | Admin password; at least 6 characters with uppercase and lowercase letters |
 
 ### Required production URLs
 
@@ -115,8 +117,8 @@ Set secrets in your local `.env` or deployment secret manager. Do not commit
 - Set server runtime variables in this **server** Vercel project's Settings.
   `MONGODB_URI`, `DB_NAME`, `CLIENT_URL`, `JWKS_URL`, `STRIPE_SECRET_KEY`,
   `STRIPE_WEBHOOK_SECRET`, and `STRIPE_PRICE_ID` are required. `PORT` is
-  optional and unnecessary on Vercel. `ADMIN_NAME` and `ADMIN_EMAIL` are only
-  needed when running `npm run seed:admin`.
+  optional and unnecessary on Vercel. `ADMIN_NAME`, `ADMIN_EMAIL`, and
+  `ADMIN_PASSWORD` are only needed when running `npm run seed:admin`.
 
 ## Stripe webhook setup
 
