@@ -20,12 +20,28 @@ async function createIndexes(database: Db): Promise<void> {
   await Promise.all([
     database.collection("services").createIndexes([
       {
+        key: { status: 1, isAvailable: 1, createdAt: -1, _id: -1 },
+        name: "services_public_featured",
+      },
+      {
+        key: { status: 1, isAvailable: 1, category: 1, price: 1, _id: 1 },
+        name: "services_public_category_price",
+      },
+      {
+        key: { status: 1, createdAt: -1, _id: -1 },
+        name: "services_admin_status_created",
+      },
+      {
         key: { status: 1, isAvailable: 1, category: 1, price: 1 },
         name: "services_public_search",
       },
       {
         key: { vendorId: 1, createdAt: -1 },
         name: "services_vendor_created",
+      },
+      {
+        key: { vendorId: 1, status: 1, isAvailable: 1 },
+        name: "services_vendor_stats",
       },
     ]),
     database.collection("bookings").createIndexes([
@@ -49,7 +65,29 @@ async function createIndexes(database: Db): Promise<void> {
         key: { vendorId: 1, createdAt: -1 },
         name: "bookings_vendor_created",
       },
+      {
+        key: { vendorId: 1, status: 1 },
+        name: "bookings_vendor_stats",
+      },
+      {
+        key: { customerId: 1, status: 1, eventDate: 1 },
+        name: "bookings_customer_stats",
+      },
     ]),
+    database.collection("user").createIndexes([
+      {
+        key: { createdAt: -1, _id: -1 },
+        name: "users_admin_created",
+      },
+      {
+        key: { role: 1, createdAt: -1, _id: -1 },
+        name: "users_admin_role_created",
+      },
+    ]),
+    database.collection("transactions").createIndex(
+      { createdAt: -1, _id: -1 },
+      { name: "transactions_admin_created" },
+    ),
     database.collection("transactions").createIndex(
       { stripeSessionId: 1 },
       { unique: true, name: "transactions_stripe_session_unique" },
