@@ -3,6 +3,11 @@ import { ObjectId } from "mongodb";
 import { AppError } from "../lib/errors";
 import { parseObjectId } from "../lib/object-id";
 import {
+  assertAvailableServiceCapacity,
+  vendorHasPremiumPlan,
+  withVendorServiceCapacityLock,
+} from "../lib/service-capacity";
+import {
   availabilitySchema,
   createServiceSchema,
   emptyQuerySchema,
@@ -10,27 +15,8 @@ import {
   type ServiceRecord,
 } from "../lib/services";
 import { getDatabase } from "../lib/mongodb";
-import { getUserId, hasPremiumSubscription } from "../lib/users";
+import { getUserId } from "../lib/users";
 import { parseInput } from "../lib/validation";
-
-const FREE_AVAILABLE_SERVICE_LIMIT = 3;
-
-async function assertAvailableServiceCapacity(vendorId: string): Promise<void> {
-  const count = await getDatabase()
-    .collection<ServiceRecord>("services")
-    .countDocuments({
-      vendorId,
-      isAvailable: true,
-      status: { $ne: "rejected" },
-    });
-
-  if (count >= FREE_AVAILABLE_SERVICE_LIMIT) {
-    throw new AppError(
-      403,
-      "Free plan allows up to 3 non-rejected available services. Upgrade to Premium or disable another service.",
-    );
-  }
-}
 
 export const listVendorServices: RequestHandler = async (request, response) => {
   parseInput(emptyQuerySchema, request.query);
@@ -47,10 +33,6 @@ export const createVendorService: RequestHandler = async (request, response) => 
   const input = parseInput(createServiceSchema, request.body);
   const vendorId = getUserId(request.user);
 
-  if (input.isAvailable && !hasPremiumSubscription(request.user)) {
-    await assertAvailableServiceCapacity(vendorId);
-  }
-
   const service: ServiceRecord = {
     _id: new ObjectId(),
     vendorId,
@@ -64,7 +46,17 @@ export const createVendorService: RequestHandler = async (request, response) => 
     isAvailable: input.isAvailable,
     createdAt: new Date(),
   };
-  await getDatabase().collection<ServiceRecord>("services").insertOne(service);
+  const saveService = async (): Promise<void> => {
+    if (!(await vendorHasPremiumPlan(vendorId))) {
+      await assertAvailableServiceCapacity(vendorId);
+    }
+    await getDatabase().collection<ServiceRecord>("services").insertOne(service);
+  };
+  if (input.isAvailable) {
+    await withVendorServiceCapacityLock(vendorId, saveService);
+  } else {
+    await getDatabase().collection<ServiceRecord>("services").insertOne(service);
+  }
 
   response.status(201).json({ service });
 };
@@ -109,29 +101,35 @@ export const setVendorServiceAvailability: RequestHandler = async (request, resp
   const vendorId = getUserId(request.user);
   const serviceId = parseObjectId(request.params.id, "service id");
   const collection = getDatabase().collection<ServiceRecord>("services");
-  const service = await collection.findOne({ _id: serviceId, vendorId });
+  const updateAvailability = async (): Promise<ServiceRecord> => {
+    const service = await collection.findOne({ _id: serviceId, vendorId });
+    if (!service) {
+      throw new AppError(404, "Service not found");
+    }
 
-  if (!service) {
-    throw new AppError(404, "Service not found");
-  }
+    if (
+      input.isAvailable &&
+      !service.isAvailable &&
+      service.status !== "rejected" &&
+      !(await vendorHasPremiumPlan(vendorId))
+    ) {
+      await assertAvailableServiceCapacity(vendorId);
+    }
 
-  if (
-    input.isAvailable &&
-    !service.isAvailable &&
-    service.status !== "rejected" &&
-    !hasPremiumSubscription(request.user)
-  ) {
-    await assertAvailableServiceCapacity(vendorId);
-  }
+    await collection.updateOne(
+      { _id: serviceId, vendorId },
+      { $set: { isAvailable: input.isAvailable } },
+    );
+    const updatedService = await collection.findOne({ _id: serviceId, vendorId });
+    if (!updatedService) {
+      throw new AppError(404, "Service not found");
+    }
 
-  await collection.updateOne(
-    { _id: serviceId, vendorId },
-    { $set: { isAvailable: input.isAvailable } },
-  );
-  const updatedService = await collection.findOne({ _id: serviceId, vendorId });
-  if (!updatedService) {
-    throw new AppError(404, "Service not found");
-  }
+    return updatedService;
+  };
+  const updatedService = input.isAvailable
+    ? await withVendorServiceCapacityLock(vendorId, updateAvailability)
+    : await updateAvailability();
 
   response.status(200).json({ service: updatedService });
 };

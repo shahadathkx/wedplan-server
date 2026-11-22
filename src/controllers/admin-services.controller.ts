@@ -8,6 +8,11 @@ import {
   type ServiceRecord,
 } from "../lib/services";
 import { getDatabase } from "../lib/mongodb";
+import {
+  assertAvailableServiceCapacity,
+  vendorHasPremiumPlan,
+  withVendorServiceCapacityLock,
+} from "../lib/service-capacity";
 import { parseInput } from "../lib/validation";
 
 export const listAdminServices: RequestHandler = async (request, response) => {
@@ -47,18 +52,47 @@ export const setAdminServiceStatus: RequestHandler = async (request, response) =
   const { status } = parseInput(serviceStatusSchema, request.body);
   const serviceId = parseObjectId(request.params.id, "service id");
   const collection = getDatabase().collection<ServiceRecord>("services");
-  const result = await collection.updateOne({ _id: serviceId }, { $set: { status } });
-
-  if (result.matchedCount === 0) {
-    throw new AppError(404, "Service not found");
-  }
-
   const service = await collection.findOne({ _id: serviceId });
   if (!service) {
     throw new AppError(404, "Service not found");
   }
 
-  response.status(200).json({ service });
+  const updateStatus = async (): Promise<ServiceRecord> => {
+    const currentService = await collection.findOne({ _id: serviceId });
+    if (!currentService) {
+      throw new AppError(404, "Service not found");
+    }
+
+    if (
+      currentService.status === "rejected" &&
+      status !== "rejected" &&
+      currentService.isAvailable &&
+      !(await vendorHasPremiumPlan(currentService.vendorId))
+    ) {
+      await assertAvailableServiceCapacity(currentService.vendorId);
+    }
+
+    const result = await collection.updateOne(
+      { _id: serviceId },
+      { $set: { status } },
+    );
+    if (result.matchedCount === 0) {
+      throw new AppError(404, "Service not found");
+    }
+
+    const updatedService = await collection.findOne({ _id: serviceId });
+    if (!updatedService) {
+      throw new AppError(404, "Service not found");
+    }
+
+    return updatedService;
+  };
+  const updatedService = await withVendorServiceCapacityLock(
+    service.vendorId,
+    updateStatus,
+  );
+
+  response.status(200).json({ service: updatedService });
 };
 
 export const deleteAdminService: RequestHandler = async (request, response) => {
