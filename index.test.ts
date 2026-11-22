@@ -2,14 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { Application } from "express";
 
-const handler: Application = require("./index");
+const handler: Application = require("./api/index").default;
 
-test("Vercel root entry exports the Express app as a CommonJS handler", () => {
+test("Vercel API entry exports the Express app as a handler", () => {
   assert.equal(typeof handler, "function");
   assert.equal(typeof handler.listen, "function");
 });
 
-test("Vercel root entry serves the health route", async () => {
+test("Vercel API entry serves the health route", async () => {
   const server = handler.listen(0, "127.0.0.1");
 
   try {

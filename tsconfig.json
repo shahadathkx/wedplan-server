@@ -10,5 +10,5 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true
   },
-  "include": ["index.ts", "index.test.ts", "src/**/*.ts", "scripts/**/*.ts"]
+  "include": ["api/**/*.ts", "index.test.ts", "src/**/*.ts", "scripts/**/*.ts"]
 }

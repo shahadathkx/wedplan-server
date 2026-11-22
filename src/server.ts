@@ -1,4 +1,4 @@
-import { app } from "./app";
+import app from "./app";
 import { getDatabaseConfig, getPort } from "./lib/env";
 import { closeDatabaseConnection, connectToDatabase } from "./lib/mongodb";
 
@@ -28,7 +28,9 @@ async function startServer(): Promise<void> {
   process.once("SIGTERM", shutdown);
 }
 
-startServer().catch((error: unknown) => {
-  console.error("Failed to start WedPlan API", error);
-  process.exitCode = 1;
-});
+if (!process.env.VERCEL) {
+  startServer().catch((error: unknown) => {
+    console.error("Failed to start WedPlan API", error);
+    process.exitCode = 1;
+  });
+}

@@ -1,8 +1,20 @@
 import { Db, MongoClient } from "mongodb";
 
-let client: MongoClient | null = null;
-let databaseInstance: Db | null = null;
-let connection: Promise<Db> | null = null;
+type MongoConnectionCache = {
+  client: MongoClient | null;
+  database: Db | null;
+  connection: Promise<Db> | null;
+};
+
+const globalForMongo = globalThis as typeof globalThis & {
+  wedplanMongoCache?: MongoConnectionCache;
+};
+
+const cache = (globalForMongo.wedplanMongoCache ??= {
+  client: null,
+  database: null,
+  connection: null,
+});
 
 async function createIndexes(database: Db): Promise<void> {
   await Promise.all([
@@ -49,42 +61,42 @@ export function connectToDatabase(
   uri: string,
   databaseName: string,
 ): Promise<Db> {
-  if (connection) {
-    return connection;
+  if (cache.connection) {
+    return cache.connection;
   }
 
   const mongoClient = new MongoClient(uri);
-  client = mongoClient;
-  connection = (async () => {
+  cache.client = mongoClient;
+  cache.connection = (async () => {
     await mongoClient.connect();
     const database = mongoClient.db(databaseName);
     await createIndexes(database);
-    databaseInstance = database;
+    cache.database = database;
     return database;
   })().catch(async (error: unknown) => {
     await mongoClient.close();
-    client = null;
-    databaseInstance = null;
-    connection = null;
+    cache.client = null;
+    cache.database = null;
+    cache.connection = null;
     throw error;
   });
 
-  return connection;
+  return cache.connection;
 }
 
 export function getDatabase(): Db {
-  if (!databaseInstance) {
+  if (!cache.database) {
     throw new Error("MongoDB has not been connected");
   }
 
-  return databaseInstance;
+  return cache.database;
 }
 
 export async function closeDatabaseConnection(): Promise<void> {
-  if (client) {
-    await client.close();
+  if (cache.client) {
+    await cache.client.close();
   }
-  client = null;
-  databaseInstance = null;
-  connection = null;
+  cache.client = null;
+  cache.database = null;
+  cache.connection = null;
 }

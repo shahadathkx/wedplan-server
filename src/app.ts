@@ -22,6 +22,7 @@ import { adminRouter } from "./routes/admin.routes";
 import { connectToDatabase } from "./lib/mongodb";
 
 export const app = express();
+export default app;
 const nodeEnvironment =
   process.env.NODE_ENV ??
   (process.env.VERCEL === "1" ? "production" : "development");
