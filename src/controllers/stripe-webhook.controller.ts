@@ -4,8 +4,11 @@ import Stripe from "stripe";
 import { AppError } from "../lib/errors";
 import { getStripeWebhookSecret } from "../lib/env";
 import { getDatabase } from "../lib/mongodb";
+import {
+  activateVendorPremium,
+  downgradeVendorToFree,
+} from "../lib/service-capacity";
 import { getStripe } from "../lib/stripe";
-import { userIdFilter, type UserRecord } from "../lib/users";
 
 function getSubscriptionExpiry(subscription: Stripe.Subscription): Date | null {
   const periodEnds = subscription.items.data.map((item) => item.current_period_end);
@@ -15,23 +18,6 @@ function getSubscriptionExpiry(subscription: Stripe.Subscription): Date | null {
 
   const latestPeriodEnd = Math.max(...periodEnds);
   return Number.isFinite(latestPeriodEnd) ? new Date(latestPeriodEnd * 1000) : null;
-}
-
-async function setVendorSubscription(
-  vendorId: string,
-  subscriptionPlan: "free" | "premium",
-  subscriptionExpiresAt: Date | null,
-): Promise<void> {
-  const result = await getDatabase()
-    .collection<UserRecord>("user")
-    .updateOne(
-      { ...userIdFilter(vendorId), role: "vendor" },
-      { $set: { subscriptionPlan, subscriptionExpiresAt } },
-    );
-
-  if (result.matchedCount === 0) {
-    throw new AppError(404, "Stripe subscription vendor not found");
-  }
 }
 
 async function syncSubscription(
@@ -47,11 +33,11 @@ async function syncSubscription(
     expiresAt !== null &&
     expiresAt.getTime() > Date.now();
 
-  await setVendorSubscription(
-    vendorId,
-    isPremium ? "premium" : "free",
-    isPremium ? expiresAt : null,
-  );
+  if (isPremium && expiresAt) {
+    await activateVendorPremium(vendorId, expiresAt);
+  } else {
+    await downgradeVendorToFree(vendorId);
+  }
 }
 
 function requiredVendorId(metadata: Stripe.Metadata | null | undefined): string {
@@ -132,7 +118,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Pro
 }
 
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription): Promise<void> {
-  await setVendorSubscription(requiredVendorId(subscription.metadata), "free", null);
+  await downgradeVendorToFree(requiredVendorId(subscription.metadata));
 }
 
 export const receiveStripeWebhook: RequestHandler = async (request, response) => {

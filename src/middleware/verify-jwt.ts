@@ -3,6 +3,7 @@ import type { RequestHandler } from "express";
 import { getJwksUrl } from "../lib/env";
 import { AppError } from "../lib/errors";
 import { getDatabase } from "../lib/mongodb";
+import { expireVendorPremiumIfDue } from "../lib/service-capacity";
 import {
   hasExpiredPremiumSubscription,
   userIdFilter,
@@ -44,31 +45,17 @@ export const verifyJwt: RequestHandler = async (request, _response, next) => {
     }
 
     if (user.role === "vendor" && hasExpiredPremiumSubscription(user)) {
-      const result = await users.updateOne(
-        {
-          ...userIdFilter(payload.sub),
-          role: "vendor",
-          subscriptionPlan: "premium",
-          subscriptionExpiresAt: user.subscriptionExpiresAt,
-        },
-        { $set: { subscriptionPlan: "free", subscriptionExpiresAt: null } },
-      );
-
-      if (result.matchedCount > 0) {
-        user.subscriptionPlan = "free";
-        user.subscriptionExpiresAt = null;
-      } else {
-        const refreshedUser = await users.findOne(userIdFilter(payload.sub));
-        if (!refreshedUser) {
-          next(new AppError(401, "User associated with token was not found"));
-          return;
-        }
-        if (refreshedUser.isBlocked) {
-          next(new AppError(403, "User is blocked"));
-          return;
-        }
-        user = refreshedUser;
+      await expireVendorPremiumIfDue(payload.sub);
+      const refreshedUser = await users.findOne(userIdFilter(payload.sub));
+      if (!refreshedUser) {
+        next(new AppError(401, "User associated with token was not found"));
+        return;
       }
+      if (refreshedUser.isBlocked) {
+        next(new AppError(403, "User is blocked"));
+        return;
+      }
+      user = refreshedUser;
     }
 
     request.user = user;

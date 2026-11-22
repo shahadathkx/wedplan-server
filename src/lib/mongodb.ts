@@ -43,6 +43,10 @@ async function createIndexes(database: Db): Promise<void> {
         key: { vendorId: 1, status: 1, isAvailable: 1 },
         name: "services_vendor_stats",
       },
+      {
+        key: { vendorId: 1, isAvailable: 1, createdAt: -1, _id: -1 },
+        name: "services_vendor_available_created",
+      },
     ]),
     database.collection("bookings").createIndexes([
       {
