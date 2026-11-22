@@ -44,6 +44,7 @@ export const getAdminStats: RequestHandler = async (_request, response) => {
     pendingBookings,
     acceptedBookings,
     totalTransactions,
+    revenueByCurrency,
   ] = await Promise.all([
     users.countDocuments({}),
     users.countDocuments({ role: "customer" }),
@@ -56,6 +57,11 @@ export const getAdminStats: RequestHandler = async (_request, response) => {
     bookings.countDocuments({ status: "pending" }),
     bookings.countDocuments({ status: "accepted" }),
     transactions.countDocuments({}),
+    transactions.aggregate<{ _id: string; amount: number }>([
+      { $match: { status: "paid" } },
+      { $group: { _id: "$currency", amount: { $sum: "$amount" } } },
+      { $sort: { _id: 1 } },
+    ]).toArray(),
   ]);
 
   response.status(200).json({
@@ -71,6 +77,10 @@ export const getAdminStats: RequestHandler = async (_request, response) => {
       pendingBookings,
       acceptedBookings,
       totalTransactions,
+      revenueByCurrency: revenueByCurrency.map(({ _id, amount }) => ({
+        currency: _id,
+        amount,
+      })),
     },
   });
 };
