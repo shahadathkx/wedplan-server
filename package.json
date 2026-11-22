@@ -2,7 +2,6 @@
   "name": "wedplan-server",
   "version": "1.0.0",
   "description": "Express API for WedPlan",
-  "main": "dist/src/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
