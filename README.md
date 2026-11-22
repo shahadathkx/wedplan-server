@@ -8,10 +8,9 @@ tools for platform staff.
 
 ## Live application
 
-- **Live API:** [https://your-api-domain.example](https://your-api-domain.example)
-- **Client application:** [https://your-client-domain.example](https://your-client-domain.example)
+- **Live API:** [https://wedplan-server-skhe.vercel.app](https://wedplan-server-skhe.vercel.app)
+- **Client application:** [https://wedplan-client-eight.vercel.app](https://wedplan-client-eight.vercel.app)
 
-Replace these example links with the deployed application URLs.
 
 ## Repositories
 
