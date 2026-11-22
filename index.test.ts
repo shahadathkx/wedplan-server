@@ -4,7 +4,7 @@ import type { Application } from "express";
 
 const handler: Application = require("./index");
 
-test("Vercel entry exports the Express app as a CommonJS handler", () => {
+test("Vercel root entry exports the Express app as a CommonJS handler", () => {
   assert.equal(typeof handler, "function");
   assert.equal(typeof handler.listen, "function");
 });

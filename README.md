@@ -165,9 +165,10 @@ Protected requests use `Authorization: Bearer <jwt>`. Errors use
 
 ## Deployment
 
-The repository includes `vercel.json` and `api/index.ts`. The Vercel function
-exports the Express `app` as its serverless handler; the app connects to MongoDB
-on demand and reuses the connection within a warm function instance.
+Vercel auto-detects the root `index.ts` CommonJS export as the Express
+application entry point. No custom build or rewrite rules are required; the app
+connects to MongoDB on demand and reuses the connection within a warm function
+instance.
 
 1. Import the `wedplan-server` repository into Vercel.
 2. Set `MONGODB_URI`, `DB_NAME`, `CLIENT_URL`,
