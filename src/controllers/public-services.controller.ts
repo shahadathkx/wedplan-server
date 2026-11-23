@@ -53,9 +53,40 @@ export const listPublicServices: RequestHandler = async (request, response) => {
 export const getFeaturedServices: RequestHandler = async (_request, response) => {
   const services = await getDatabase()
     .collection<ServiceRecord>("services")
-    .find({ status: "approved", isAvailable: true })
-    .sort({ createdAt: -1, _id: -1 })
-    .limit(6)
+    .aggregate([
+      { $match: { status: "approved", isAvailable: true } },
+      { $sort: { createdAt: -1, _id: -1 } },
+      { $limit: 6 },
+      {
+        $lookup: {
+          from: "user",
+          let: { vendorId: "$vendorId" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $or: [
+                    { $eq: ["$id", "$$vendorId"] },
+                    { $eq: [{ $toString: "$_id" }, "$$vendorId"] },
+                  ],
+                },
+              },
+            },
+            {
+              $project: {
+                _id: 0,
+                name: 1,
+                businessName: 1,
+                image: 1,
+                subscriptionPlan: 1,
+              },
+            },
+          ],
+          as: "vendor",
+        },
+      },
+      { $unwind: { path: "$vendor", preserveNullAndEmptyArrays: true } },
+    ])
     .toArray();
 
   response.status(200).json(services);

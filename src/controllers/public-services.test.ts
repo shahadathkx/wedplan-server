@@ -16,18 +16,13 @@ test("featured services return an empty array and filter for approved available 
   }).wedplanMongoCache;
   assert.ok(cache);
   const originalDatabase = cache.database;
-  let observedFilter: unknown;
+  let observedPipeline: unknown;
 
   cache.database = {
     collection: () => ({
-      find(filter: unknown) {
-        observedFilter = filter;
-        const cursor = {
-          sort: () => cursor,
-          limit: () => cursor,
-          toArray: async () => [],
-        };
-        return cursor;
+      aggregate(pipeline: unknown) {
+        observedPipeline = pipeline;
+        return { toArray: async () => [] };
       },
     }),
   } as unknown as Db;
@@ -48,7 +43,40 @@ test("featured services return an empty array and filter for approved available 
     const response = await fetch(`http://127.0.0.1:${address.port}/featured`);
     assert.equal(response.status, 200);
     assert.deepEqual(await response.json(), []);
-    assert.deepEqual(observedFilter, { status: "approved", isAvailable: true });
+    assert.deepEqual(observedPipeline, [
+      { $match: { status: "approved", isAvailable: true } },
+      { $sort: { createdAt: -1, _id: -1 } },
+      { $limit: 6 },
+      {
+        $lookup: {
+          from: "user",
+          let: { vendorId: "$vendorId" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $or: [
+                    { $eq: ["$id", "$$vendorId"] },
+                    { $eq: [{ $toString: "$_id" }, "$$vendorId"] },
+                  ],
+                },
+              },
+            },
+            {
+              $project: {
+                _id: 0,
+                name: 1,
+                businessName: 1,
+                image: 1,
+                subscriptionPlan: 1,
+              },
+            },
+          ],
+          as: "vendor",
+        },
+      },
+      { $unwind: { path: "$vendor", preserveNullAndEmptyArrays: true } },
+    ]);
   } finally {
     cache.database = originalDatabase;
     await new Promise<void>((resolve, reject) => {
