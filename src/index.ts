@@ -2,10 +2,11 @@ import cors from "cors";
 import express from "express";
 import { createCorsOptions } from "./lib/cors";
 import { getDatabaseConfig } from "./lib/env";
-import { connectToDatabase, warnMongoDatabaseNameMismatch } from "./lib/mongodb";
+import { connectToDatabase } from "./lib/mongodb";
 import { getHomePage } from "./controllers/home.controller";
 import { errorHandler } from "./middleware/error-handler";
 import { notFoundHandler } from "./middleware/not-found";
+import { recordDatabaseConnection, requestTimingMiddleware, timeRequestHandler } from "./middleware/request-timing";
 import { adminRouter } from "./routes/admin.routes";
 import { adminServicesRouter } from "./routes/admin-services.routes";
 import {
@@ -25,40 +26,22 @@ import { vendorStatsRouter } from "./routes/vendor-stats.routes";
 const app = express();
 export { app };
 export default app;
-warnMongoDatabaseNameMismatch();
 
 const nodeEnvironment =
   process.env.NODE_ENV ??
   (process.env.VERCEL === "1" ? "production" : "development");
 
-app.use((request, response, next) => {
-  if (request.path !== "/api/bookings") {
-    next();
-    return;
-  }
-
-  response.once("finish", () => {
-    const protocol = request.get("x-forwarded-proto") ?? request.protocol;
-    const host = request.get("x-forwarded-host") ?? request.get("host");
-    const url = host
-      ? `${protocol}://${host}${request.originalUrl}`
-      : request.originalUrl;
-    console.info("[booking-request]", {
-      method: request.method,
-      url,
-      status: response.statusCode,
-    });
-  });
-  next();
-});
+app.use(requestTimingMiddleware);
 app.use(cors(createCorsOptions(process.env.CLIENT_URL, nodeEnvironment)));
-app.get("/", getHomePage);
+app.get("/", timeRequestHandler(getHomePage));
 app.use("/health", healthRouter);
 
 app.use(async (_request, _response, next) => {
   try {
     const { uri, databaseName } = getDatabaseConfig();
+    const startedAt = performance.now();
     await connectToDatabase(uri, databaseName);
+    recordDatabaseConnection(performance.now() - startedAt);
     next();
   } catch (error) {
     next(error);

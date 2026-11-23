@@ -6,9 +6,10 @@ import {
 import { requireRole } from "../middleware/require-role";
 import { validateObjectId } from "../middleware/validate-object-id";
 import { verifyJwt } from "../middleware/verify-jwt";
+import { timeRequestHandler } from "../middleware/request-timing";
 
 export const vendorBookingsRouter = Router();
 
 vendorBookingsRouter.use(verifyJwt, requireRole("vendor"));
-vendorBookingsRouter.get("/", listVendorBookings);
-vendorBookingsRouter.patch("/:id", validateObjectId(), updateVendorBookingStatus);
+vendorBookingsRouter.get("/", timeRequestHandler(listVendorBookings));
+vendorBookingsRouter.patch("/:id", validateObjectId(), timeRequestHandler(updateVendorBookingStatus));

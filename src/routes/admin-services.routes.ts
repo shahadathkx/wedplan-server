@@ -7,10 +7,15 @@ import {
 import { requireRole } from "../middleware/require-role";
 import { validateObjectId } from "../middleware/validate-object-id";
 import { verifyJwt } from "../middleware/verify-jwt";
+import { timeRequestHandler } from "../middleware/request-timing";
 
 export const adminServicesRouter = Router();
 
 adminServicesRouter.use(verifyJwt, requireRole("admin"));
-adminServicesRouter.get("/", listAdminServices);
-adminServicesRouter.patch("/:id/status", validateObjectId(), setAdminServiceStatus);
-adminServicesRouter.delete("/:id", validateObjectId(), deleteAdminService);
+adminServicesRouter.get("/", timeRequestHandler(listAdminServices));
+adminServicesRouter.patch(
+  "/:id/status",
+  validateObjectId(),
+  timeRequestHandler(setAdminServiceStatus),
+);
+adminServicesRouter.delete("/:id", validateObjectId(), timeRequestHandler(deleteAdminService));

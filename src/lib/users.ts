@@ -37,8 +37,15 @@ export async function getUserFromToken(claims: TokenClaims): Promise<TokenUserRe
   const sub = typeof claims.sub === "string" && claims.sub.length > 0
     ? claims.sub
     : undefined;
+  const lookupsRun = {
+    objectIdSub: false,
+    stringSub: false,
+    idField: false,
+    caseInsensitiveEmail: false,
+  };
 
   if (sub && /^[a-f\d]{24}$/i.test(sub)) {
+    lookupsRun.objectIdSub = true;
     const user = await users.findOne({ _id: new ObjectId(sub) });
     if (user) {
       return { user, matchedBy: "sub_object_id" };
@@ -46,11 +53,13 @@ export async function getUserFromToken(claims: TokenClaims): Promise<TokenUserRe
   }
 
   if (sub) {
+    lookupsRun.stringSub = true;
     const user = await users.findOne({ _id: sub });
     if (user) {
       return { user, matchedBy: "sub_string" };
     }
 
+    lookupsRun.idField = true;
     const userById = await users.findOne({ id: sub });
     if (userById) {
       return { user: userById, matchedBy: "id" };
@@ -58,6 +67,7 @@ export async function getUserFromToken(claims: TokenClaims): Promise<TokenUserRe
   }
 
   if (typeof claims.email === "string" && claims.email.length > 0) {
+    lookupsRun.caseInsensitiveEmail = true;
     const user = await users.findOne(
       { email: claims.email },
       { collation: { locale: "en", strength: 2 } },
@@ -70,8 +80,11 @@ export async function getUserFromToken(claims: TokenClaims): Promise<TokenUserRe
   try {
     const diagnostics = await getMongoClientDiagnostics();
     console.error("JWT user lookup missed", {
-      sub: typeof claims.sub === "string" ? claims.sub : null,
-      email: typeof claims.email === "string" ? claims.email : null,
+      claims: {
+        subPresent: sub !== undefined,
+        emailPresent: typeof claims.email === "string" && claims.email.length > 0,
+      },
+      lookupsRun,
       configuredDatabaseName: process.env.DB_NAME ?? null,
       clientDatabaseName: diagnostics.databaseName,
       selectedDatabaseName: diagnostics.selectedDatabaseName,
@@ -79,8 +92,11 @@ export async function getUserFromToken(claims: TokenClaims): Promise<TokenUserRe
     });
   } catch (error) {
     console.error("JWT user lookup missed; MongoDB diagnostics could not be collected", {
-      sub: typeof claims.sub === "string" ? claims.sub : null,
-      email: typeof claims.email === "string" ? claims.email : null,
+      claims: {
+        subPresent: sub !== undefined,
+        emailPresent: typeof claims.email === "string" && claims.email.length > 0,
+      },
+      lookupsRun,
       configuredDatabaseName: process.env.DB_NAME ?? null,
       diagnosticsError:
         error instanceof Error ? error.name : "Unknown diagnostics error",

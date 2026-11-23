@@ -5,9 +5,10 @@ import {
   listPublicServices,
 } from "../controllers/public-services.controller";
 import { validateObjectId } from "../middleware/validate-object-id";
+import { timeRequestHandler } from "../middleware/request-timing";
 
 export const publicServicesRouter = Router();
 
-publicServicesRouter.get("/", listPublicServices);
-publicServicesRouter.get("/featured", getFeaturedServices);
-publicServicesRouter.get("/:id", validateObjectId(), getPublicServiceById);
+publicServicesRouter.get("/", timeRequestHandler(listPublicServices));
+publicServicesRouter.get("/featured", timeRequestHandler(getFeaturedServices));
+publicServicesRouter.get("/:id", validateObjectId(), timeRequestHandler(getPublicServiceById));

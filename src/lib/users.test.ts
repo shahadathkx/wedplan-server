@@ -1,10 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { ObjectId, type Db, type MongoClient } from "mongodb";
-import {
-  getMongoClientDiagnostics,
-  warnMongoDatabaseNameMismatch,
-} from "./mongodb";
+import { getMongoClientDiagnostics } from "./mongodb";
 import { getUserFromToken } from "./users";
 
 type MongoCache = {
@@ -197,8 +194,13 @@ test("user token lookup logs server-side diagnostics on a miss", async () => {
   assert.equal(errors.length, 1);
   assert.equal(errors[0][0], "JWT user lookup missed");
   assert.deepEqual(errors[0][1], {
-    sub: "missing",
-    email: "person@example.com",
+    claims: { subPresent: true, emailPresent: true },
+    lookupsRun: {
+      objectIdSub: false,
+      stringSub: true,
+      idField: true,
+      caseInsensitiveEmail: true,
+    },
     configuredDatabaseName: process.env.DB_NAME ?? null,
     clientDatabaseName: null,
     selectedDatabaseName: null,
@@ -249,27 +251,4 @@ test("MongoDB diagnostics use the client's default database and list its collect
   } finally {
     cache.client = originalClient;
   }
-});
-
-test("MongoDB startup warning identifies a URI database mismatch", () => {
-  const originalWarn = console.warn;
-  const warnings: unknown[][] = [];
-  console.warn = (...args: unknown[]) => warnings.push(args);
-
-  try {
-    warnMongoDatabaseNameMismatch(
-      "mongodb+srv://user:password@example.mongodb.net/uri-db",
-      "configured-db",
-    );
-  } finally {
-    console.warn = originalWarn;
-  }
-
-  assert.deepEqual(warnings, [[
-    "MongoDB URI database differs from DB_NAME",
-    {
-      uriDatabaseName: "uri-db",
-      configuredDatabaseName: "configured-db",
-    },
-  ]]);
 });

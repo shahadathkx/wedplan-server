@@ -193,9 +193,12 @@ Protected requests use `Authorization: Bearer <jwt>`. Errors use
 All protected routes resolve the Better Auth user through the shared JWT
 middleware and the MongoDB `user` collection selected by `DB_NAME`. Successful
 lookups log only the matched lookup method. A lookup miss logs the token's
-subject and email, the client's default database, the selected database, and
-collection names server-side to support deployment diagnosis; treat those
-server logs as sensitive.
+claim-presence flags, which identifier lookups ran, the client's default
+database, the selected database, and collection names server-side to support
+deployment diagnosis. Request logs include middleware, MongoDB command,
+connection, handler, and total timings, plus the slowest request observed in
+that warm serverless instance. Database command time is included in handler
+time, so those two timing values are not additive.
 
 ## Deployment
 

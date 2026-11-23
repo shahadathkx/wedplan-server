@@ -1,9 +1,15 @@
 import { Db, MongoClient } from "mongodb";
+import {
+  recordDatabaseCommandFailed,
+  recordDatabaseCommandFinished,
+  recordDatabaseCommandStarted,
+} from "../middleware/request-timing";
 
 type MongoConnectionCache = {
   client: MongoClient | null;
   database: Db | null;
   connection: Promise<Db> | null;
+  indexes: Promise<void> | null;
 };
 
 const globalForMongo = globalThis as typeof globalThis & {
@@ -14,6 +20,7 @@ const cache = (globalForMongo.wedplanMongoCache ??= {
   client: null,
   database: null,
   connection: null,
+  indexes: null,
 });
 
 async function createIndexes(database: Db): Promise<void> {
@@ -107,19 +114,45 @@ export function connectToDatabase(
     return cache.connection;
   }
 
-  const mongoClient = new MongoClient(uri);
+  const mongoClient = new MongoClient(uri, { monitorCommands: true });
+  mongoClient.on("commandStarted", recordDatabaseCommandStarted);
+  mongoClient.on("commandSucceeded", recordDatabaseCommandFinished);
+  mongoClient.on("commandFailed", recordDatabaseCommandFailed);
   cache.client = mongoClient;
   cache.connection = (async () => {
     await mongoClient.connect();
+    const clientDatabase = mongoClient.db();
     const database = mongoClient.db(databaseName);
-    await createIndexes(database);
     cache.database = database;
+    cache.indexes ??= createIndexes(database);
+    await cache.indexes;
+    const [clientCollections, selectedCollections] = await Promise.all([
+      clientDatabase.listCollections({}, { nameOnly: true }).toArray(),
+      database.listCollections({}, { nameOnly: true }).toArray(),
+    ]);
+
+    console.info("MongoDB connected", {
+      clientDatabaseName: clientDatabase.databaseName,
+      configuredDatabaseName: process.env.DB_NAME ?? databaseName,
+      selectedDatabaseName: database.databaseName,
+      clientCollectionNames: clientCollections.map(({ name }) => name).sort(),
+      selectedCollectionNames: selectedCollections.map(({ name }) => name).sort(),
+    });
+    if (clientDatabase.databaseName !== databaseName) {
+      console.warn("MongoDB client default database differs from DB_NAME", {
+        clientDatabaseName: clientDatabase.databaseName,
+        configuredDatabaseName: process.env.DB_NAME ?? databaseName,
+        selectedDatabaseName: database.databaseName,
+      });
+    }
+
     return database;
   })().catch(async (error: unknown) => {
     await mongoClient.close();
     cache.client = null;
     cache.database = null;
     cache.connection = null;
+    cache.indexes = null;
     throw error;
   });
 
@@ -156,38 +189,6 @@ export async function getMongoClientDiagnostics(): Promise<{
   };
 }
 
-function getMongoUriDatabaseName(uri: string): string | null {
-  const match = /^mongodb(?:\+srv)?:\/\/(?:[^/?#]*@)?[^/?#]+\/([^/?#]+)/i.exec(
-    uri.trim(),
-  );
-  if (!match) {
-    return null;
-  }
-
-  try {
-    return decodeURIComponent(match[1]);
-  } catch {
-    return null;
-  }
-}
-
-export function warnMongoDatabaseNameMismatch(
-  uri = process.env.MONGODB_URI,
-  configuredDatabaseName = process.env.DB_NAME,
-): void {
-  if (!uri?.trim() || !configuredDatabaseName?.trim()) {
-    return;
-  }
-
-  const uriDatabaseName = getMongoUriDatabaseName(uri);
-  if (uriDatabaseName && uriDatabaseName !== configuredDatabaseName.trim()) {
-    console.warn("MongoDB URI database differs from DB_NAME", {
-      uriDatabaseName,
-      configuredDatabaseName: configuredDatabaseName.trim(),
-    });
-  }
-}
-
 export async function closeDatabaseConnection(): Promise<void> {
   if (cache.client) {
     await cache.client.close();
@@ -195,4 +196,5 @@ export async function closeDatabaseConnection(): Promise<void> {
   cache.client = null;
   cache.database = null;
   cache.connection = null;
+  cache.indexes = null;
 }
