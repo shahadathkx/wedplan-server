@@ -29,6 +29,10 @@ test("admin user filters and block changes validate their inputs", () => {
     limit: 20,
   });
   assert.throws(() => adminUsersQuerySchema.parse({ role: "owner" }));
+  assert.deepEqual(
+    adminUsersQuerySchema.parse({ q: "", role: "", page: "", limit: "" }),
+    { q: undefined, role: undefined, page: 1, limit: 20 },
+  );
   assert.throws(() => blockUserSchema.parse({ isBlocked: "true" }));
   assert.throws(() => blockUserSchema.parse({ isBlocked: true, role: "admin" }));
 });

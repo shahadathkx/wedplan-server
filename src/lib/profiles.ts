@@ -21,10 +21,22 @@ export const updateProfileSchema = z
 
 export const adminUsersQuerySchema = z
   .object({
-    q: z.string().trim().min(1).max(100).optional(),
-    role: z.enum(["customer", "vendor", "admin"]).optional(),
-    page: z.coerce.number().int().min(1).max(1_000_000).default(1),
-    limit: z.coerce.number().int().min(1).max(100).default(20),
+    q: z.preprocess(
+      (value) => value === "" ? undefined : value,
+      z.string().trim().min(1).max(100).optional(),
+    ),
+    role: z.preprocess(
+      (value) => value === "" ? undefined : value,
+      z.enum(["customer", "vendor", "admin"]).optional(),
+    ),
+    page: z.preprocess(
+      (value) => value === "" ? undefined : value,
+      z.coerce.number().int().min(1).max(1_000_000).default(1),
+    ),
+    limit: z.preprocess(
+      (value) => value === "" ? undefined : value,
+      z.coerce.number().int().min(1).max(100).default(20),
+    ),
   })
   .strict();
 
