@@ -189,6 +189,14 @@ export async function getMongoClientDiagnostics(): Promise<{
   };
 }
 
+export async function getMongoUserEstimatedCount(): Promise<number> {
+  if (!cache.client) {
+    throw new Error("MongoDB client has not been connected");
+  }
+
+  return cache.client.db().collection("user").estimatedDocumentCount();
+}
+
 export async function closeDatabaseConnection(): Promise<void> {
   if (cache.client) {
     await cache.client.close();

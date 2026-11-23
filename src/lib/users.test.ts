@@ -208,6 +208,86 @@ test("user token lookup logs server-side diagnostics on a miss", async () => {
   });
 });
 
+test("user token lookup includes redacted response diagnostics only when enabled", async () => {
+  const previousDebugAuth = process.env.DEBUG_AUTH;
+  process.env.DEBUG_AUTH = "1";
+  const subject = "0123456789abcdef01234567";
+  const email = "private@example.com";
+  try {
+    const resolution = await withMockUsers(async () => null, async (_calls, _errors) => {
+      const cache = (globalThis as typeof globalThis & {
+        wedplanMongoCache?: MongoCache;
+      }).wedplanMongoCache;
+      assert.ok(cache);
+      cache.client = {
+        db() {
+          return {
+            databaseName: "uri-database",
+            listCollections() {
+              return {
+                toArray: async () => [{ name: "user" }, { name: "services" }],
+              };
+            },
+            collection(name: string) {
+              assert.equal(name, "user");
+              return { estimatedDocumentCount: async () => 12 };
+            },
+          };
+        },
+      } as unknown as MongoClient;
+
+      return getUserFromToken({
+        sub: subject,
+        email,
+        id: "better-auth-id",
+        iss: "https://auth.example.test",
+        aud: "wedplan-client",
+      });
+    });
+
+    assert.ok(resolution.debug);
+    assert.deepEqual(resolution.debug, {
+      claimsPresent: { sub: true, email: true, id: true },
+      databaseName: "uri-database",
+      envDbName: process.env.DB_NAME ?? null,
+      collections: ["services", "user"],
+      userCount: 12,
+      tried: {
+        objectIdSub: { ran: true, matched: false },
+        stringSub: { ran: true, matched: false },
+        idField: { ran: true, matched: false },
+        caseInsensitiveEmail: { ran: true, matched: false },
+      },
+      tokenIssuer: "https://auth.example.test",
+      tokenAudience: "wedplan-client",
+    });
+    const serialized = JSON.stringify(resolution.debug);
+    assert.equal(serialized.includes(subject), false);
+    assert.equal(serialized.includes(email), false);
+  } finally {
+    if (previousDebugAuth === undefined) {
+      delete process.env.DEBUG_AUTH;
+    } else {
+      process.env.DEBUG_AUTH = previousDebugAuth;
+    }
+  }
+});
+
+test("user token lookup omits response diagnostics when disabled", async () => {
+  const previousDebugAuth = process.env.DEBUG_AUTH;
+  delete process.env.DEBUG_AUTH;
+  try {
+    const resolution = await withMockUsers(async () => null, async () =>
+      getUserFromToken({ sub: "missing", email: "private@example.com" }),
+    );
+    assert.deepEqual(resolution, { user: null, matchedBy: null });
+  } finally {
+    if (previousDebugAuth !== undefined) {
+      process.env.DEBUG_AUTH = previousDebugAuth;
+    }
+  }
+});
+
 test("user token lookup uses email when the token has no subject", async () => {
   const user = { _id: new ObjectId(), email: "person@example.com", role: "customer" as const };
   const calls = await withMockUsers(async (filter) =>

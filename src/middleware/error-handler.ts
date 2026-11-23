@@ -23,7 +23,10 @@ export const errorHandler: ErrorRequestHandler = (error, _request, response, nex
   }
 
   if (error instanceof AppError) {
-    response.status(error.statusCode).json({ message: error.message });
+    response.status(error.statusCode).json({
+      message: error.message,
+      ...(error.debug ? { debug: error.debug } : {}),
+    });
     return;
   }
 

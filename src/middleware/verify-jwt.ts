@@ -33,6 +33,9 @@ export const verifyJwt: RequestHandler = async (request, _response, next) => {
     const claims = {
       sub: payload.sub,
       email: payload.email,
+      id: payload.id,
+      iss: payload.iss,
+      aud: payload.aud,
     };
     console.info("Verified JWT claim presence", {
       sub: typeof claims.sub === "string" && claims.sub.length > 0,
@@ -45,7 +48,11 @@ export const verifyJwt: RequestHandler = async (request, _response, next) => {
     let user = resolution.user;
 
     if (!user) {
-      next(new AppError(401, "User associated with token was not found"));
+      next(new AppError(
+        401,
+        "User associated with token was not found",
+        resolution.debug,
+      ));
       return;
     }
     if (user.isBlocked) {
@@ -59,7 +66,11 @@ export const verifyJwt: RequestHandler = async (request, _response, next) => {
       const refreshedResolution = await getUserFromToken(claims);
       const refreshedUser = refreshedResolution.user;
       if (!refreshedUser) {
-        next(new AppError(401, "User associated with token was not found"));
+        next(new AppError(
+          401,
+          "User associated with token was not found",
+          refreshedResolution.debug,
+        ));
         return;
       }
       if (refreshedUser.isBlocked) {

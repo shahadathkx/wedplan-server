@@ -9,7 +9,7 @@
     "seed:admin": "tsx scripts/seed-admin.ts",
     "seed:services": "tsx scripts/seed-services.ts",
     "check:admin": "tsx scripts/check-admin.ts",
-    "test": "tsx --test index.test.ts src/app.test.ts src/controllers/public-services.test.ts src/controllers/admin-services.test.ts src/controllers/admin.controller.test.ts src/middleware/request-timing.test.ts src/lib/service-capacity.test.ts scripts/seed-admin.test.ts scripts/seed-services.test.ts src/lib/users.test.ts src/lib/services.test.ts src/lib/bookings.test.ts src/lib/profiles.test.ts src/lib/cors.test.ts src/lib/env.test.ts src/lib/payment-urls.test.ts"
+    "test": "tsx --test index.test.ts src/app.test.ts src/controllers/public-services.test.ts src/controllers/admin-services.test.ts src/controllers/admin.controller.test.ts src/middleware/request-timing.test.ts src/middleware/error-handler.test.ts src/lib/service-capacity.test.ts scripts/seed-admin.test.ts scripts/seed-services.test.ts src/lib/users.test.ts src/lib/services.test.ts src/lib/bookings.test.ts src/lib/profiles.test.ts src/lib/cors.test.ts src/lib/env.test.ts src/lib/payment-urls.test.ts"
   },
   "type": "commonjs",
   "dependencies": {
