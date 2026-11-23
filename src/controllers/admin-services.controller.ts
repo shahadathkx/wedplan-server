@@ -105,5 +105,5 @@ export const deleteAdminService: RequestHandler = async (request, response) => {
     throw new AppError(404, "Service not found");
   }
 
-  response.status(204).end();
+  response.status(200).json({ message: "Service deleted" });
 };
