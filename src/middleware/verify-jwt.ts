@@ -1,5 +1,5 @@
-import { createRemoteJWKSet, errors, jwtVerify } from "jose";
 import type { RequestHandler } from "express";
+import type { createRemoteJWKSet } from "jose";
 import { getJwksUrl } from "../lib/env";
 import { AppError } from "../lib/errors";
 import { getDatabase } from "../lib/mongodb";
@@ -11,10 +11,11 @@ import {
 } from "../lib/users";
 
 let remoteJwks: ReturnType<typeof createRemoteJWKSet> | undefined;
+let joseModule: Promise<typeof import("jose")> | undefined;
 
-function getRemoteJwks(): ReturnType<typeof createRemoteJWKSet> {
-  remoteJwks ??= createRemoteJWKSet(new URL(getJwksUrl()));
-  return remoteJwks;
+function loadJose(): Promise<typeof import("jose")> {
+  joseModule ??= import("jose");
+  return joseModule;
 }
 
 export const verifyJwt: RequestHandler = async (request, _response, next) => {
@@ -25,8 +26,10 @@ export const verifyJwt: RequestHandler = async (request, _response, next) => {
     return;
   }
 
+  const jose = await loadJose();
   try {
-    const { payload } = await jwtVerify(match[1], getRemoteJwks());
+    remoteJwks ??= jose.createRemoteJWKSet(new URL(getJwksUrl()));
+    const { payload } = await jose.jwtVerify(match[1], remoteJwks);
     if (typeof payload.sub !== "string" || payload.sub.length === 0) {
       next(new AppError(401, "Invalid authorization token"));
       return;
@@ -61,7 +64,7 @@ export const verifyJwt: RequestHandler = async (request, _response, next) => {
     request.user = user;
     next();
   } catch (error) {
-    if (error instanceof errors.JOSEError) {
+    if (error instanceof jose.errors.JOSEError) {
       next(new AppError(401, "Invalid or expired authorization token"));
       return;
     }

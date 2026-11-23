@@ -19,7 +19,7 @@ test("health endpoint starts without database and Stripe configuration", async (
   process.env.CLIENT_URL = "https://wedplan-client-eight.vercel.app";
 
   try {
-    const { app } = await import("./app");
+    const { app } = await import("./app.js");
     const server = app.listen(0, "127.0.0.1");
     try {
       await new Promise<void>((resolve, reject) => {
@@ -94,7 +94,7 @@ test("database connection failures return a JSON 500 response", async () => {
   cache.database = null;
 
   try {
-    const { app } = await import("./app");
+    const { app } = await import("./app.js");
     const server = app.listen(0, "127.0.0.1");
 
     try {
@@ -149,7 +149,7 @@ test("malformed JSON bodies return a JSON 400 response", async () => {
   cache.connection = Promise.resolve({} as Db);
 
   try {
-    const { app } = await import("./app");
+    const { app } = await import("./app.js");
     const server = app.listen(0, "127.0.0.1");
 
     try {
