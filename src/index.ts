@@ -31,6 +31,26 @@ const nodeEnvironment =
   process.env.NODE_ENV ??
   (process.env.VERCEL === "1" ? "production" : "development");
 
+app.use((request, response, next) => {
+  if (request.path !== "/api/bookings") {
+    next();
+    return;
+  }
+
+  response.once("finish", () => {
+    const protocol = request.get("x-forwarded-proto") ?? request.protocol;
+    const host = request.get("x-forwarded-host") ?? request.get("host");
+    const url = host
+      ? `${protocol}://${host}${request.originalUrl}`
+      : request.originalUrl;
+    console.info("[booking-request]", {
+      method: request.method,
+      url,
+      status: response.statusCode,
+    });
+  });
+  next();
+});
 app.use(cors(createCorsOptions(process.env.CLIENT_URL, nodeEnvironment)));
 app.get("/", getHomePage);
 app.use("/health", healthRouter);
