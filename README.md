@@ -190,6 +190,13 @@ Premium price ID for local testing.
 Protected requests use `Authorization: Bearer <jwt>`. Errors use
 `{ "message": "..." }`.
 
+All protected routes resolve the Better Auth user through the shared JWT
+middleware and the MongoDB `user` collection selected by `DB_NAME`. Successful
+lookups log only the matched lookup method. A lookup miss logs the token's
+subject and email, the client's default database, the selected database, and
+collection names server-side to support deployment diagnosis; treat those
+server logs as sensitive.
+
 ## Deployment
 
 Vercel auto-detects the Express application exported from `src/index.ts` and

@@ -32,12 +32,10 @@ export const verifyJwt: RequestHandler = async (request, _response, next) => {
     const { payload } = await jose.jwtVerify(match[1], remoteJwks);
     const claims = {
       sub: payload.sub,
-      id: payload.id,
       email: payload.email,
     };
     console.info("Verified JWT claim presence", {
       sub: typeof claims.sub === "string" && claims.sub.length > 0,
-      id: typeof claims.id === "string" && claims.id.length > 0,
       email: typeof claims.email === "string" && claims.email.length > 0,
     });
     const resolution = await getUserFromToken(claims);
@@ -58,9 +56,8 @@ export const verifyJwt: RequestHandler = async (request, _response, next) => {
     if (user.role === "vendor" && hasExpiredPremiumSubscription(user)) {
       const userObjectId = getUserObjectId(user);
       await expireVendorPremiumIfDue(userObjectId);
-      const refreshedUser = await getDatabase()
-        .collection("user")
-        .findOne({ _id: userObjectId });
+      const refreshedResolution = await getUserFromToken(claims);
+      const refreshedUser = refreshedResolution.user;
       if (!refreshedUser) {
         next(new AppError(401, "User associated with token was not found"));
         return;

@@ -134,6 +134,60 @@ export function getDatabase(): Db {
   return cache.database;
 }
 
+export async function getMongoClientDiagnostics(): Promise<{
+  databaseName: string | null;
+  selectedDatabaseName: string | null;
+  collectionNames: string[];
+}> {
+  if (!cache.client) {
+    return {
+      databaseName: null,
+      selectedDatabaseName: cache.database?.databaseName ?? null,
+      collectionNames: [],
+    };
+  }
+
+  const database = cache.client.db();
+  const collections = await database.listCollections({}, { nameOnly: true }).toArray();
+  return {
+    databaseName: database.databaseName,
+    selectedDatabaseName: cache.database?.databaseName ?? null,
+    collectionNames: collections.map(({ name }) => name).sort(),
+  };
+}
+
+function getMongoUriDatabaseName(uri: string): string | null {
+  const match = /^mongodb(?:\+srv)?:\/\/(?:[^/?#]*@)?[^/?#]+\/([^/?#]+)/i.exec(
+    uri.trim(),
+  );
+  if (!match) {
+    return null;
+  }
+
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return null;
+  }
+}
+
+export function warnMongoDatabaseNameMismatch(
+  uri = process.env.MONGODB_URI,
+  configuredDatabaseName = process.env.DB_NAME,
+): void {
+  if (!uri?.trim() || !configuredDatabaseName?.trim()) {
+    return;
+  }
+
+  const uriDatabaseName = getMongoUriDatabaseName(uri);
+  if (uriDatabaseName && uriDatabaseName !== configuredDatabaseName.trim()) {
+    console.warn("MongoDB URI database differs from DB_NAME", {
+      uriDatabaseName,
+      configuredDatabaseName: configuredDatabaseName.trim(),
+    });
+  }
+}
+
 export async function closeDatabaseConnection(): Promise<void> {
   if (cache.client) {
     await cache.client.close();

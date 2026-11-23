@@ -1,6 +1,6 @@
 import { ObjectId, type Filter } from "mongodb";
 import { AppError } from "./errors";
-import { getDatabase } from "./mongodb";
+import { getDatabase, getMongoClientDiagnostics } from "./mongodb";
 
 export const userRoles = ["customer", "vendor", "admin"] as const;
 export type UserRole = (typeof userRoles)[number];
@@ -22,7 +22,6 @@ export interface UserRecord {
 
 export interface TokenClaims {
   sub?: unknown;
-  id?: unknown;
   email?: unknown;
 }
 
@@ -37,9 +36,7 @@ export async function getUserFromToken(claims: TokenClaims): Promise<TokenUserRe
   const users = getDatabase().collection<UserRecord>("user");
   const sub = typeof claims.sub === "string" && claims.sub.length > 0
     ? claims.sub
-    : typeof claims.id === "string" && claims.id.length > 0
-      ? claims.id
-      : undefined;
+    : undefined;
 
   if (sub && /^[a-f\d]{24}$/i.test(sub)) {
     const user = await users.findOne({ _id: new ObjectId(sub) });
@@ -61,10 +58,33 @@ export async function getUserFromToken(claims: TokenClaims): Promise<TokenUserRe
   }
 
   if (typeof claims.email === "string" && claims.email.length > 0) {
-    const user = await users.findOne({ email: claims.email });
+    const user = await users.findOne(
+      { email: claims.email },
+      { collation: { locale: "en", strength: 2 } },
+    );
     if (user) {
       return { user, matchedBy: "email" };
     }
+  }
+
+  try {
+    const diagnostics = await getMongoClientDiagnostics();
+    console.error("JWT user lookup missed", {
+      sub: typeof claims.sub === "string" ? claims.sub : null,
+      email: typeof claims.email === "string" ? claims.email : null,
+      configuredDatabaseName: process.env.DB_NAME ?? null,
+      clientDatabaseName: diagnostics.databaseName,
+      selectedDatabaseName: diagnostics.selectedDatabaseName,
+      collectionNames: diagnostics.collectionNames,
+    });
+  } catch (error) {
+    console.error("JWT user lookup missed; MongoDB diagnostics could not be collected", {
+      sub: typeof claims.sub === "string" ? claims.sub : null,
+      email: typeof claims.email === "string" ? claims.email : null,
+      configuredDatabaseName: process.env.DB_NAME ?? null,
+      diagnosticsError:
+        error instanceof Error ? error.name : "Unknown diagnostics error",
+    });
   }
 
   return { user: null, matchedBy: null };

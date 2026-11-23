@@ -2,7 +2,7 @@ import cors from "cors";
 import express from "express";
 import { createCorsOptions } from "./lib/cors";
 import { getDatabaseConfig } from "./lib/env";
-import { connectToDatabase } from "./lib/mongodb";
+import { connectToDatabase, warnMongoDatabaseNameMismatch } from "./lib/mongodb";
 import { getHomePage } from "./controllers/home.controller";
 import { errorHandler } from "./middleware/error-handler";
 import { notFoundHandler } from "./middleware/not-found";
@@ -25,6 +25,7 @@ import { vendorStatsRouter } from "./routes/vendor-stats.routes";
 const app = express();
 export { app };
 export default app;
+warnMongoDatabaseNameMismatch();
 
 const nodeEnvironment =
   process.env.NODE_ENV ??
