@@ -2,6 +2,7 @@ import type { RequestHandler } from "express";
 import type { Filter } from "mongodb";
 import { AppError } from "../lib/errors";
 import { getDatabase } from "../lib/mongodb";
+import { parseObjectId } from "../lib/object-id";
 import {
   adminUsersQuerySchema,
   blockUserSchema,
@@ -140,10 +141,7 @@ export const listAdminUsers: RequestHandler = async (request, response) => {
 };
 
 export const getAdminUser: RequestHandler = async (request, response) => {
-  const userId = request.params.id;
-  if (typeof userId !== "string") {
-    throw new AppError(400, "Invalid user id");
-  }
+  const userId = parseObjectId(request.params.id, "user id").toHexString();
   const user = await getDatabase()
     .collection<UserRecord>("user")
     .findOne(userIdFilter(userId), {
@@ -170,24 +168,48 @@ export const getAdminUser: RequestHandler = async (request, response) => {
 
 export const setAdminUserBlocked: RequestHandler = async (request, response) => {
   const { isBlocked } = parseInput(blockUserSchema, request.body);
-  const userId = request.params.id;
-  if (typeof userId !== "string") {
-    throw new AppError(400, "Invalid user id");
+  const userId = parseObjectId(request.params.id, "user id").toHexString();
+  const users = getDatabase().collection<UserRecord>("user");
+  const target = await users.findOne(userIdFilter(userId), {
+    projection: { _id: 1, id: 1, role: 1 },
+  });
+  if (!target) {
+    throw new AppError(404, "User not found");
   }
+
   if (isBlocked) {
-    const selfIds = [request.user?.id, request.user?._id?.toString()];
-    if (selfIds.includes(userId)) {
+    const adminIds = new Set(
+      [request.user?.id, request.user?._id?.toString()].filter(
+        (id): id is string => typeof id === "string",
+      ),
+    );
+    const targetIds = [target.id, target._id?.toString()];
+    if (targetIds.some((id) => typeof id === "string" && adminIds.has(id))) {
       throw new AppError(400, "Admins cannot block themselves");
+    }
+    if (target.role === "admin") {
+      throw new AppError(400, "Admins cannot block another admin");
     }
   }
 
-  const users = getDatabase().collection<UserRecord>("user");
+  const updateFilter: Filter<UserRecord> = isBlocked
+    ? { $and: [userIdFilter(userId), { role: { $ne: "admin" } }] }
+    : userIdFilter(userId);
   const result = await users.updateOne(
-    userIdFilter(userId),
+    updateFilter,
     { $set: { isBlocked, updatedAt: new Date() } },
   );
   if (result.matchedCount === 0) {
-    throw new AppError(404, "User not found");
+    const currentTarget = await users.findOne(userIdFilter(userId), {
+      projection: { role: 1 },
+    });
+    if (!currentTarget) {
+      throw new AppError(404, "User not found");
+    }
+    if (isBlocked && currentTarget.role === "admin") {
+      throw new AppError(400, "Admins cannot block another admin");
+    }
+    throw new AppError(409, "User block status could not be updated");
   }
 
   const user = await users.findOne(userIdFilter(userId), {
