@@ -5,9 +5,9 @@ import { AppError } from "../lib/errors";
 import { getDatabase } from "../lib/mongodb";
 import { expireVendorPremiumIfDue } from "../lib/service-capacity";
 import {
+  getUserFromToken,
+  getUserObjectId,
   hasExpiredPremiumSubscription,
-  userIdFilter,
-  type UserRecord,
 } from "../lib/users";
 
 let remoteJwks: ReturnType<typeof createRemoteJWKSet> | undefined;
@@ -30,13 +30,21 @@ export const verifyJwt: RequestHandler = async (request, _response, next) => {
   try {
     remoteJwks ??= jose.createRemoteJWKSet(new URL(getJwksUrl()));
     const { payload } = await jose.jwtVerify(match[1], remoteJwks);
-    if (typeof payload.sub !== "string" || payload.sub.length === 0) {
-      next(new AppError(401, "Invalid authorization token"));
-      return;
-    }
-
-    const users = getDatabase().collection<UserRecord>("user");
-    let user = await users.findOne(userIdFilter(payload.sub));
+    const claims = {
+      sub: payload.sub,
+      id: payload.id,
+      email: payload.email,
+    };
+    console.info("Verified JWT claim presence", {
+      sub: typeof claims.sub === "string" && claims.sub.length > 0,
+      id: typeof claims.id === "string" && claims.id.length > 0,
+      email: typeof claims.email === "string" && claims.email.length > 0,
+    });
+    const resolution = await getUserFromToken(claims);
+    console.info("Verified JWT user lookup", {
+      matchedBy: resolution.matchedBy ?? "none",
+    });
+    let user = resolution.user;
 
     if (!user) {
       next(new AppError(401, "User associated with token was not found"));
@@ -48,8 +56,11 @@ export const verifyJwt: RequestHandler = async (request, _response, next) => {
     }
 
     if (user.role === "vendor" && hasExpiredPremiumSubscription(user)) {
-      await expireVendorPremiumIfDue(payload.sub);
-      const refreshedUser = await users.findOne(userIdFilter(payload.sub));
+      const userObjectId = getUserObjectId(user);
+      await expireVendorPremiumIfDue(userObjectId);
+      const refreshedUser = await getDatabase()
+        .collection("user")
+        .findOne({ _id: userObjectId });
       if (!refreshedUser) {
         next(new AppError(401, "User associated with token was not found"));
         return;

@@ -22,6 +22,7 @@ export function bookingPopulationPipeline(match: Document): Document[] {
             $match: {
               $expr: {
                 $or: [
+                  { $eq: ["$_id", "$$relatedUserId"] },
                   { $eq: ["$id", "$$relatedUserId"] },
                   { $eq: [{ $toString: "$_id" }, "$$relatedUserId"] },
                 ],
@@ -43,6 +44,7 @@ export function bookingPopulationPipeline(match: Document): Document[] {
             $match: {
               $expr: {
                 $or: [
+                  { $eq: ["$_id", "$$relatedUserId"] },
                   { $eq: ["$id", "$$relatedUserId"] },
                   { $eq: [{ $toString: "$_id" }, "$$relatedUserId"] },
                 ],

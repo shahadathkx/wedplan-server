@@ -25,6 +25,7 @@ test("vendor service capacity lock serializes concurrent serverless mutations", 
   assert.ok(cache);
 
   const originalDatabase = cache.database;
+  const vendorId = new ObjectId();
   let token: string | undefined;
   let expiresAt: Date | undefined;
   const users = {
@@ -58,7 +59,7 @@ test("vendor service capacity lock serializes concurrent serverless mutations", 
   let activeMutations = 0;
   let peakMutations = 0;
   const mutate = () =>
-    withVendorServiceCapacityLock("vendor-1", async () => {
+    withVendorServiceCapacityLock(vendorId, async () => {
       activeMutations += 1;
       peakMutations = Math.max(peakMutations, activeMutations);
       await new Promise<void>((resolve) => setTimeout(resolve, 40));
@@ -85,6 +86,7 @@ test("free-plan capacity rejects the fourth non-rejected available service", asy
   }).wedplanMongoCache;
   assert.ok(cache);
   const originalDatabase = cache.database;
+  const vendorId = new ObjectId();
   let observedFilter: unknown;
 
   cache.database = {
@@ -98,11 +100,11 @@ test("free-plan capacity rejects the fourth non-rejected available service", asy
 
   try {
     await assert.rejects(
-      assertAvailableServiceCapacity("vendor-1"),
+      assertAvailableServiceCapacity(vendorId),
       (error: unknown) => error instanceof AppError && error.statusCode === 403,
     );
     assert.deepEqual(observedFilter, {
-      vendorId: "vendor-1",
+      vendorId,
       isAvailable: true,
       status: { $ne: "rejected" },
     });
@@ -126,6 +128,7 @@ test("Premium downgrade keeps the newest three services available", async () => 
   }).wedplanMongoCache;
   assert.ok(cache);
   const originalDatabase = cache.database;
+  const vendorId = new ObjectId();
   const overflow = [{ _id: new ObjectId() }, { _id: new ObjectId() }];
   let observedFilter: unknown;
   let observedSort: unknown;
@@ -184,10 +187,10 @@ test("Premium downgrade keeps the newest three services available", async () => 
   } as unknown as Db;
 
   try {
-    await downgradeVendorToFree("vendor-1");
+    await downgradeVendorToFree(vendorId);
     assert.equal(plan, "free");
     assert.deepEqual(observedFilter, {
-      vendorId: "vendor-1",
+      vendorId,
       isAvailable: true,
       status: { $ne: "rejected" },
     });

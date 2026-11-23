@@ -21,7 +21,7 @@ function getSubscriptionExpiry(subscription: Stripe.Subscription): Date | null {
 }
 
 async function syncSubscription(
-  vendorId: string,
+  vendorId: ObjectId,
   subscription: Stripe.Subscription,
   forceFree = false,
 ): Promise<void> {
@@ -40,17 +40,17 @@ async function syncSubscription(
   }
 }
 
-function requiredVendorId(metadata: Stripe.Metadata | null | undefined): string {
+function requiredVendorId(metadata: Stripe.Metadata | null | undefined): ObjectId {
   const vendorId = metadata?.vendorId;
-  if (!vendorId || vendorId.trim().length === 0) {
+  if (!vendorId || !/^[a-f\d]{24}$/i.test(vendorId)) {
     throw new AppError(400, "Stripe event is missing vendor metadata");
   }
-  return vendorId;
+  return new ObjectId(vendorId);
 }
 
 async function recordCheckoutTransaction(
   session: Stripe.Checkout.Session,
-  vendorId: string,
+  vendorId: ObjectId,
   subscriptionId: string,
 ): Promise<void> {
   try {

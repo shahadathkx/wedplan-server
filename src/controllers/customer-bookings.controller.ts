@@ -10,12 +10,12 @@ import {
 import { bookingPopulationPipeline } from "../lib/populate-bookings";
 import { emptyQuerySchema, type ServiceRecord } from "../lib/services";
 import { getDatabase } from "../lib/mongodb";
-import { getUserId } from "../lib/users";
+import { getUserObjectId } from "../lib/users";
 import { parseInput } from "../lib/validation";
 
 export const createCustomerBooking: RequestHandler = async (request, response) => {
   const input = parseInput(createBookingSchema, request.body);
-  const customerId = getUserId(request.user);
+  const customerId = getUserObjectId(request.user);
   const serviceId = parseObjectId(input.serviceId, "service id");
   const service = await getDatabase()
     .collection<ServiceRecord>("services")
@@ -24,7 +24,7 @@ export const createCustomerBooking: RequestHandler = async (request, response) =
   if (!service) {
     throw new AppError(404, "Service not found");
   }
-  if (service.vendorId === customerId) {
+  if (service.vendorId.equals(customerId)) {
     throw new AppError(400, "You cannot book your own service");
   }
 
@@ -66,7 +66,7 @@ export const listCustomerBookings: RequestHandler = async (request, response) =>
   parseInput(emptyQuerySchema, request.query);
   const bookings = await getDatabase()
     .collection<BookingRecord>("bookings")
-    .aggregate(bookingPopulationPipeline({ customerId: getUserId(request.user) }))
+    .aggregate(bookingPopulationPipeline({ customerId: getUserObjectId(request.user) }))
     .toArray();
 
   response.status(200).json({ bookings });
@@ -74,7 +74,7 @@ export const listCustomerBookings: RequestHandler = async (request, response) =>
 
 export const cancelCustomerBooking: RequestHandler = async (request, response) => {
   parseInput(emptyBodySchema, request.body);
-  const customerId = getUserId(request.user);
+  const customerId = getUserObjectId(request.user);
   const bookingId = parseObjectId(request.params.id, "booking id");
   const collection = getDatabase().collection<BookingRecord>("bookings");
   const result = await collection.updateOne(

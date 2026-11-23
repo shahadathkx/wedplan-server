@@ -8,14 +8,14 @@ import { parseObjectId } from "../lib/object-id";
 import { bookingPopulationPipeline } from "../lib/populate-bookings";
 import { emptyQuerySchema } from "../lib/services";
 import { getDatabase } from "../lib/mongodb";
-import { getUserId } from "../lib/users";
+import { getUserObjectId } from "../lib/users";
 import { parseInput } from "../lib/validation";
 
 export const listVendorBookings: RequestHandler = async (request, response) => {
   parseInput(emptyQuerySchema, request.query);
   const bookings = await getDatabase()
     .collection<BookingRecord>("bookings")
-    .aggregate(bookingPopulationPipeline({ vendorId: getUserId(request.user) }))
+    .aggregate(bookingPopulationPipeline({ vendorId: getUserObjectId(request.user) }))
     .toArray();
 
   response.status(200).json({ bookings });
@@ -23,7 +23,7 @@ export const listVendorBookings: RequestHandler = async (request, response) => {
 
 export const updateVendorBookingStatus: RequestHandler = async (request, response) => {
   const { action } = parseInput(vendorBookingActionSchema, request.body);
-  const vendorId = getUserId(request.user);
+  const vendorId = getUserObjectId(request.user);
   const bookingId = parseObjectId(request.params.id, "booking id");
   const collection = getDatabase().collection<BookingRecord>("bookings");
   const status = action === "accept" ? "accepted" : "rejected";

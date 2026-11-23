@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { Filter } from "mongodb";
+import { ObjectId, type Filter } from "mongodb";
 import { AppError } from "./errors";
 import { getDatabase } from "./mongodb";
 import type { ServiceRecord } from "./services";
@@ -21,7 +21,7 @@ const LOCK_WAIT_MS = 5_000;
 const LOCK_RETRY_MS = 25;
 
 async function updateVendorSubscription(
-  vendorId: string,
+  vendorId: ObjectId,
   subscriptionPlan: "free" | "premium",
   subscriptionExpiresAt: Date | null,
 ): Promise<void> {
@@ -37,7 +37,7 @@ async function updateVendorSubscription(
   }
 }
 
-async function disableAvailableServicesBeyondLimit(vendorId: string): Promise<void> {
+async function disableAvailableServicesBeyondLimit(vendorId: ObjectId): Promise<void> {
   const services = getDatabase().collection<ServiceRecord>("services");
   const overflow = await services
     .find(
@@ -66,7 +66,7 @@ async function disableAvailableServicesBeyondLimit(vendorId: string): Promise<vo
 }
 
 export async function withVendorServiceCapacityLock<T>(
-  vendorId: string,
+  vendorId: ObjectId,
   operation: () => Promise<T>,
 ): Promise<T> {
   const users = getDatabase().collection<LockableUser>("user");
@@ -121,7 +121,7 @@ export async function withVendorServiceCapacityLock<T>(
 }
 
 export async function activateVendorPremium(
-  vendorId: string,
+  vendorId: ObjectId,
   subscriptionExpiresAt: Date,
 ): Promise<void> {
   await withVendorServiceCapacityLock(vendorId, () =>
@@ -129,14 +129,14 @@ export async function activateVendorPremium(
   );
 }
 
-export async function downgradeVendorToFree(vendorId: string): Promise<void> {
+export async function downgradeVendorToFree(vendorId: ObjectId): Promise<void> {
   await withVendorServiceCapacityLock(vendorId, async () => {
     await disableAvailableServicesBeyondLimit(vendorId);
     await updateVendorSubscription(vendorId, "free", null);
   });
 }
 
-export async function expireVendorPremiumIfDue(vendorId: string): Promise<boolean> {
+export async function expireVendorPremiumIfDue(vendorId: ObjectId): Promise<boolean> {
   return withVendorServiceCapacityLock(vendorId, async () => {
     const users = getDatabase().collection<UserRecord>("user");
     const vendor = await users.findOne(userIdFilter(vendorId));
@@ -161,7 +161,7 @@ export async function expireVendorPremiumIfDue(vendorId: string): Promise<boolea
   });
 }
 
-export async function assertAvailableServiceCapacity(vendorId: string): Promise<void> {
+export async function assertAvailableServiceCapacity(vendorId: ObjectId): Promise<void> {
   const count = await getDatabase()
     .collection<ServiceRecord>("services")
     .countDocuments({
@@ -178,7 +178,7 @@ export async function assertAvailableServiceCapacity(vendorId: string): Promise<
   }
 }
 
-export async function vendorHasPremiumPlan(vendorId: string): Promise<boolean> {
+export async function vendorHasPremiumPlan(vendorId: ObjectId): Promise<boolean> {
   const vendor = await getDatabase()
     .collection<UserRecord>("user")
     .findOne(userIdFilter(vendorId));

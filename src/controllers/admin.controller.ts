@@ -232,6 +232,7 @@ export const listAdminTransactions: RequestHandler = async (request, response) =
                 $match: {
                   $expr: {
                     $or: [
+                      { $eq: ["$_id", "$$vendorId"] },
                       { $eq: ["$id", "$$vendorId"] },
                       { $eq: [{ $toString: "$_id" }, "$$vendorId"] },
                     ],

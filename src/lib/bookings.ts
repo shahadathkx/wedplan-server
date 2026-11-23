@@ -7,8 +7,8 @@ export type BookingStatus = (typeof bookingStatuses)[number];
 export interface BookingRecord extends Document {
   _id: ObjectId;
   serviceId: ObjectId;
-  vendorId: string;
-  customerId: string;
+  vendorId: ObjectId;
+  customerId: ObjectId;
   eventDate: Date;
   eventLocation: string;
   message: string;

@@ -15,14 +15,14 @@ import {
   type ServiceRecord,
 } from "../lib/services";
 import { getDatabase } from "../lib/mongodb";
-import { getUserId } from "../lib/users";
+import { getUserObjectId } from "../lib/users";
 import { parseInput } from "../lib/validation";
 
 export const listVendorServices: RequestHandler = async (request, response) => {
   parseInput(emptyQuerySchema, request.query);
   const services = await getDatabase()
     .collection<ServiceRecord>("services")
-    .find({ vendorId: getUserId(request.user) })
+    .find({ vendorId: getUserObjectId(request.user) })
     .sort({ createdAt: -1, _id: -1 })
     .toArray();
 
@@ -31,7 +31,7 @@ export const listVendorServices: RequestHandler = async (request, response) => {
 
 export const createVendorService: RequestHandler = async (request, response) => {
   const input = parseInput(createServiceSchema, request.body);
-  const vendorId = getUserId(request.user);
+  const vendorId = getUserObjectId(request.user);
 
   const service: ServiceRecord = {
     _id: new ObjectId(),
@@ -63,7 +63,7 @@ export const createVendorService: RequestHandler = async (request, response) => 
 
 export const updateVendorService: RequestHandler = async (request, response) => {
   const input = parseInput(updateServiceSchema, request.body);
-  const vendorId = getUserId(request.user);
+  const vendorId = getUserObjectId(request.user);
   const serviceId = parseObjectId(request.params.id, "service id");
   const collection = getDatabase().collection<ServiceRecord>("services");
   const result = await collection.updateOne(
@@ -84,7 +84,7 @@ export const updateVendorService: RequestHandler = async (request, response) => 
 };
 
 export const deleteVendorService: RequestHandler = async (request, response) => {
-  const vendorId = getUserId(request.user);
+  const vendorId = getUserObjectId(request.user);
   const result = await getDatabase()
     .collection<ServiceRecord>("services")
     .deleteOne({ _id: parseObjectId(request.params.id, "service id"), vendorId });
@@ -98,7 +98,7 @@ export const deleteVendorService: RequestHandler = async (request, response) => 
 
 export const setVendorServiceAvailability: RequestHandler = async (request, response) => {
   const input = parseInput(availabilitySchema, request.body);
-  const vendorId = getUserId(request.user);
+  const vendorId = getUserObjectId(request.user);
   const serviceId = parseObjectId(request.params.id, "service id");
   const collection = getDatabase().collection<ServiceRecord>("services");
   const updateAvailability = async (): Promise<ServiceRecord> => {

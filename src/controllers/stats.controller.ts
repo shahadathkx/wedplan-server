@@ -1,11 +1,11 @@
 import type { RequestHandler } from "express";
 import { getDatabase } from "../lib/mongodb";
-import { getUserId } from "../lib/users";
+import { getUserObjectId } from "../lib/users";
 import { type BookingRecord } from "../lib/bookings";
 import { type ServiceRecord } from "../lib/services";
 
 export const getVendorStats: RequestHandler = async (request, response) => {
-  const vendorId = getUserId(request.user);
+  const vendorId = getUserObjectId(request.user);
   const database = getDatabase();
   const services = database.collection<ServiceRecord>("services");
   const bookings = database.collection<BookingRecord>("bookings");
@@ -49,7 +49,7 @@ export const getVendorStats: RequestHandler = async (request, response) => {
 };
 
 export const getCustomerStats: RequestHandler = async (request, response) => {
-  const customerId = getUserId(request.user);
+  const customerId = getUserObjectId(request.user);
   const bookings = getDatabase().collection<BookingRecord>("bookings");
   const today = new Date();
   today.setUTCHours(0, 0, 0, 0);

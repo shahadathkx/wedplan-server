@@ -17,7 +17,7 @@ export type ServiceStatus = (typeof serviceStatuses)[number];
 
 export interface ServiceRecord extends Document {
   _id: ObjectId;
-  vendorId: string;
+  vendorId: ObjectId;
   serviceName: string;
   category: ServiceCategory;
   description: string;

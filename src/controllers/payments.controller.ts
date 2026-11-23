@@ -2,7 +2,7 @@ import type { RequestHandler } from "express";
 import { z } from "zod";
 import { AppError } from "../lib/errors";
 import { getClientUrl, getStripePriceId } from "../lib/env";
-import { getUserId } from "../lib/users";
+import { getUserObjectId } from "../lib/users";
 import { getStripe } from "../lib/stripe";
 import { getCheckoutReturnUrls } from "../lib/payment-urls";
 import { parseInput } from "../lib/validation";
@@ -16,7 +16,7 @@ const checkoutRequestSchema = z
 
 export const createCheckoutSession: RequestHandler = async (request, response) => {
   parseInput(checkoutRequestSchema, request.body);
-  const vendorId = getUserId(request.user);
+  const vendorId = getUserObjectId(request.user).toHexString();
   const clientUrl = getClientUrl();
   const { successUrl, cancelUrl } = getCheckoutReturnUrls(clientUrl);
   const session = await getStripe().checkout.sessions.create({
