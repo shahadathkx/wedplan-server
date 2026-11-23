@@ -156,8 +156,8 @@ async function main(): Promise<void> {
   }
   record(
     "Prepare temporary service for status/delete checks",
-    createService?.status ?? null,
     null,
+    createService?.status ?? null,
     null,
     [null, 201, null],
     temporaryServiceCreated,
