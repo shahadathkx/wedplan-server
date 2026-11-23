@@ -87,10 +87,26 @@ export const publicServicesQuerySchema = z
 
 export const adminServicesQuerySchema = z
   .object({
-    q: z.string().trim().min(1).max(100).optional(),
-    status: z.enum(serviceStatuses).optional(),
-    page: z.coerce.number().int().min(1).max(1_000_000).default(1),
-    limit: z.coerce.number().int().min(1).max(100).default(12),
+    q: z.preprocess(
+      (value) => value === "" ? undefined : value,
+      z.string().trim().min(1).max(100).optional(),
+    ),
+    status: z.preprocess(
+      (value) => value === "" ? undefined : value,
+      z.enum(serviceStatuses).optional(),
+    ),
+    category: z.preprocess(
+      (value) => value === "" ? undefined : value,
+      categorySchema.optional(),
+    ),
+    page: z.preprocess(
+      (value) => value === "" ? undefined : value,
+      z.coerce.number().int().min(1).max(1_000_000).default(1),
+    ),
+    limit: z.preprocess(
+      (value) => value === "" ? undefined : value,
+      z.coerce.number().int().min(1).max(100).default(12),
+    ),
   })
   .strict();
 

@@ -22,6 +22,9 @@ export const listAdminServices: RequestHandler = async (request, response) => {
   if (query.status) {
     filter.status = query.status;
   }
+  if (query.category) {
+    filter.category = query.category;
+  }
   if (query.q) {
     filter.serviceName = { $regex: escapeRegex(query.q), $options: "i" };
   }
@@ -29,10 +32,42 @@ export const listAdminServices: RequestHandler = async (request, response) => {
   const collection = getDatabase().collection<ServiceRecord>("services");
   const [services, total] = await Promise.all([
     collection
-      .find(filter)
-      .sort({ createdAt: -1, _id: -1 })
-      .skip((query.page - 1) * query.limit)
-      .limit(query.limit)
+      .aggregate([
+        { $match: filter },
+        { $sort: { createdAt: -1, _id: -1 } },
+        { $skip: (query.page - 1) * query.limit },
+        { $limit: query.limit },
+        {
+          $lookup: {
+            from: "user",
+            let: { vendorId: "$vendorId" },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $or: [
+                      { $eq: ["$_id", "$$vendorId"] },
+                      { $eq: ["$id", "$$vendorId"] },
+                      { $eq: [{ $toString: "$_id" }, "$$vendorId"] },
+                    ],
+                  },
+                },
+              },
+              {
+                $project: {
+                  _id: 0,
+                  name: 1,
+                  email: 1,
+                  image: 1,
+                  businessName: 1,
+                },
+              },
+            ],
+            as: "vendor",
+          },
+        },
+        { $unwind: { path: "$vendor", preserveNullAndEmptyArrays: true } },
+      ])
       .toArray(),
     collection.countDocuments(filter),
   ]);

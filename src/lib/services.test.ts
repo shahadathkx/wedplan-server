@@ -48,6 +48,35 @@ test("public and admin service queries enforce filters and bounded pagination", 
     },
   );
   assert.equal(adminServicesQuerySchema.parse({ status: "pending" }).limit, 12);
+  assert.deepEqual(
+    adminServicesQuerySchema.parse({
+      status: "pending",
+      category: "Wedding Venues",
+    }),
+    {
+      status: "pending",
+      category: "Wedding Venues",
+      page: 1,
+      limit: 12,
+    },
+  );
+  assert.deepEqual(
+    adminServicesQuerySchema.parse({
+      q: "",
+      status: "",
+      category: "",
+      page: "",
+      limit: "",
+    }),
+    {
+      q: undefined,
+      status: undefined,
+      category: undefined,
+      page: 1,
+      limit: 12,
+    },
+  );
+  assert.throws(() => adminServicesQuerySchema.parse({ category: "Other" }));
   assert.throws(() => publicServicesQuerySchema.parse({ page: "0" }));
   assert.throws(() => publicServicesQuerySchema.parse({ sort: "random" }));
   assert.throws(() => adminServicesQuerySchema.parse({ role: "admin" }));
