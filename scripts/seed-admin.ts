@@ -106,14 +106,26 @@ export async function seedAdmin(
   }
 
   const accounts = database.collection<CredentialAccount>("account");
-  await accounts.insertOne({
-    userId: userRecordId,
-    accountId: userId,
-    providerId: "credential",
-    password: passwordHash,
-    createdAt: now,
-    updatedAt: now,
-  });
+  try {
+    await accounts.insertOne({
+      userId: userRecordId,
+      accountId: userId,
+      providerId: "credential",
+      password: passwordHash,
+      createdAt: now,
+      updatedAt: now,
+    });
+  } catch (error) {
+    try {
+      await users.deleteOne({ _id: userRecordId });
+    } catch (rollbackError) {
+      throw new AggregateError(
+        [error, rollbackError],
+        "Failed to create the admin credential and remove its partial user record",
+      );
+    }
+    throw error;
+  }
 
   return "created";
 }
