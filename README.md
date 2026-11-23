@@ -81,6 +81,29 @@ only that user's role to `admin`; the existing name, verification status,
 blocked state, subscription, and credentials are left unchanged. The command
 can be rerun safely and never prints the password.
 
+To insert the 10 curated WedPlan showcase services, run:
+
+```powershell
+npm run seed:services
+```
+
+This seed requires `MONGODB_URI` and `DB_NAME`. It verifies every Unsplash image
+before writing, prefers an existing user with role `vendor`, and falls back to
+an existing admin account. It upserts by `serviceName`, prints inserted versus
+already-present counts, and can be rerun safely without creating duplicates.
+
+To verify the admin API, set `API_URL`, `ADMIN_TOKEN`, and `VENDOR_TOKEN` in
+`.env` and run:
+
+```powershell
+npm run check:admin
+```
+
+The checker verifies public health and profile responses, admin route response
+shapes, and the expected 403/401 behavior for vendor and anonymous requests. It
+creates a temporary unavailable vendor service to safely verify admin status
+and delete operations, then removes it.
+
 Other useful commands:
 
 ```powershell

@@ -56,6 +56,7 @@ test("featured services return an empty array and filter for approved available 
               $match: {
                 $expr: {
                   $or: [
+                    { $eq: ["$_id", "$$vendorId"] },
                     { $eq: ["$id", "$$vendorId"] },
                     { $eq: [{ $toString: "$_id" }, "$$vendorId"] },
                   ],

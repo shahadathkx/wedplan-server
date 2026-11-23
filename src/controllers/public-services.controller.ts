@@ -66,6 +66,7 @@ export const getFeaturedServices: RequestHandler = async (_request, response) =>
               $match: {
                 $expr: {
                   $or: [
+                    { $eq: ["$_id", "$$vendorId"] },
                     { $eq: ["$id", "$$vendorId"] },
                     { $eq: [{ $toString: "$_id" }, "$$vendorId"] },
                   ],
