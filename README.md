@@ -67,15 +67,19 @@ npm run dev
 The API listens on port `5000` by default. `GET /health` is the health check.
 MongoDB indexes are created when the application connects.
 
-To create the initial admin account and password credential, set `ADMIN_NAME`,
-`ADMIN_EMAIL`, and `ADMIN_PASSWORD` and run:
+To create the initial verified admin account and Better Auth password
+credential, set `ADMIN_NAME`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD` in `.env` and
+run:
 
 ```powershell
 npm run seed:admin
 ```
 
-The command creates an admin only when the email is unused; it never elevates an
-existing non-admin user.
+For a new email, the seed creates the admin user and a Better Auth-compatible
+hashed password credential. If the email already belongs to a user, it changes
+only that user's role to `admin`; the existing name, verification status,
+blocked state, subscription, and credentials are left unchanged. The command
+can be rerun safely and never prints the password.
 
 Other useful commands:
 
@@ -176,8 +180,8 @@ warm function invocations.
    `JWKS_URL=https://wedplan-client-eight.vercel.app/api/auth/jwks`,
    `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and `STRIPE_PRICE_ID`. Set
    `CLIENT_URL=https://wedplan-client-eight.vercel.app`. Add `ADMIN_NAME` and
-   `ADMIN_EMAIL` only if you will run the seed script locally against the
-   production database.
+   `ADMIN_EMAIL` and `ADMIN_PASSWORD` only if you will run the seed script
+   locally against the production database.
 3. Set the Framework Preset to Express, keep Build Command and Output Directory
    overrides disabled, and deploy. Vercel routes requests to the Express
    function, including `/health`.
